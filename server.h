@@ -1,7 +1,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#ifndef _REENTRANT
 #define _REENTRANT
+#endif
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -17,7 +19,6 @@
 #include "./data_structs/thread_info_block.h"
 #include "./libs/iterator.h"
 
-#undef _TRY_
 
 #ifdef SOMAXCONN
 #define MAX_CONN SOMAXCONN

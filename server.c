@@ -39,6 +39,7 @@ static void *connection_handler(void *data) {
 	shutdown(thread_node->socket, 2);
 	//close(thread_node->data->threads_socket);
 	pthread_cancel(pthread_self());
+	return NULL;
 }
 
 void set_net_data(int port, const char *ip) {
@@ -62,7 +63,6 @@ static void sig_handler(int sig) {
 
 void make_server() {
 	struct thread_block *thr_node; //Thread info nodes
-	iterPtr iter_node;
 	
 	MYSQL *mysql_con;			//main mysql server connection handler
 	MYSQL_RES *mysql_res;

@@ -1,5 +1,6 @@
 #if ! defined(QUEUE_H)
 #define QUEUE_H
+	#include <pthread.h>
 	
 	#include "../data_structs/packets.h"
 	
@@ -9,7 +10,10 @@
 	};
 	
 	typedef struct _queue {
-		struct queue_node *head, *tail;
+		struct queue_node *head;
+		struct queue_node *tail;
+		
+		pthread_mutex_t queue_lock;   //lock for queue objects
 	} Generic_queue;
 
 	int empty(Generic_queue *Q);

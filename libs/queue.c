@@ -11,6 +11,8 @@ Generic_queue *create_queue() {
 	
 	node->head = NULL;
 	node->tail = NULL;
+	pthread_mutex_init( &(node->queue_lock), NULL);
+	
 	return node;
 }
 
@@ -55,6 +57,8 @@ void destroy_queue(Generic_queue *Q) {
 		pk = dequeue(Q);
 		destroy_packet(pk);
 	}
+	
+	pthread_mutex_destroy(&(Q->queue_lock));
 }
 
 
