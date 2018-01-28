@@ -26,13 +26,13 @@ struct packet {
 
 char *pk_deencapsulator(const char *str, int field_to_ret);				
 
-struct packet *create_packet(enum msg_type tm=TXT);
+struct packet *create_packet();
 
 void set_packet_type(struct packet *pk, unsigned type);
 int set_packet_send_id(struct packet *pk, int sender);
 int set_packet_recv_id(struct packet *pk, int receiver);
 
-int set_packet_msg(struct packet *pk, const void *msg);
+int set_packet_msg(struct packet *pk, void *msg);
 
 const char *packet_to_string(struct packet *pk);
 const struct packet *string_to_packet(const char *str);

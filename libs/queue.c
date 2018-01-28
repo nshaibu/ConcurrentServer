@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "queue.h"
 
 
 Generic_queue *create_queue() {
 	Generic_queue *node = (Generic_queue*)malloc(sizeof(Generic_queue));
-	if (node == NULL) return NULL;
+	if (node == NULL)
+		return NULL;
 	
 	node->head = NULL;
 	node->tail = NULL;
@@ -16,8 +18,8 @@ int empty(Generic_queue *Q) {
 	return (Q->head == NULL);
 }
 
-void enqueue(Generic_queue *Q, void *data) {
-	struct queue_node* np = (struct queue_node*) malloc(sizeof(struct queue_node));
+void enqueue(Generic_queue *Q, struct packet *data) {
+	struct queue_node* np = (struct queue_node*)malloc(sizeof(struct queue_node));
 	np->data = data;
 	np->next = NULL;
 	
@@ -31,17 +33,29 @@ void enqueue(Generic_queue *Q, void *data) {
 	}
 }
 
-void *dequeue(Generic_queue *Q) {
-	if ( empty(Q) ) return NULL;
+struct packet *dequeue(Generic_queue *Q) {
+	if ( empty(Q) ) 
+		return NULL;
 	
-	void *hold = Q->head->data;
+	struct packet *hold = Q->head->data;
 	struct queue_node *temp = Q->head;
 	
 	Q->head = Q->head->next;
-	if (Q->head == NULL) Q->tail = NULL;
+	if (Q->head == NULL) 
+		Q->tail = NULL;
+	
 	free(temp);
 	return hold;
 } 
+
+void destroy_queue(Generic_queue *Q) {
+	struct packet *pk;
+	
+	while ( !empty(Q) ) {
+		pk = dequeue(Q);
+		destroy_packet(pk);
+	}
+}
 
 
 #ifdef TRY

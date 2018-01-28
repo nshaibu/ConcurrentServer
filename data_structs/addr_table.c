@@ -43,13 +43,13 @@ void *getAddrFromaddrTable(unsigned id) {
 void *removeFromAddrTable(unsigned id) {
 	
 	int pos = binary_search(id);
-	if (ret < 0)
+	if ( pos < 0 )
 		return NULL;
 	
 	void *hold = addrs[pos].addr_;
 	
 	for (int i=pos; i<=addrTable_len; i++) {
-		addrs[i] = addrs[i+1]
+		addrs[i] = addrs[i+1];
 	}
 	
 	addrTable_len = addrTable_len - 1;

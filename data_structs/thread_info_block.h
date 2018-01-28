@@ -2,6 +2,9 @@
 #define THREAD_INFO_BLOCK_H
 
 #include <time.h>
+#include <mysql.h>
+#include <pthread.h>
+
 #include "../libs/queue.h"
 
 enum node_op_type {
@@ -23,6 +26,8 @@ struct thread_block {
 	unsigned socket;       /* Thread's socket */
 	pthread_t tid;    /* Main thread's id */
 	pthread_t sub_tid; /* Sub-thread id for thread to poll on socket*/
+	
+	MYSQL *con;     /*mysql connection handler for the thread*/
 	
 	time_t start_time;    /* The started time */
 	time_t (*curr_time)(void);    /* gets the current time*/

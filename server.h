@@ -17,7 +17,7 @@
 #include "./data_structs/thread_info_block.h"
 #include "./libs/iterator.h"
 
-#define _TRY_
+#undef _TRY_
 
 #ifdef SOMAXCONN
 #define MAX_CONN SOMAXCONN

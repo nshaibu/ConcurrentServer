@@ -68,7 +68,7 @@ char *pk_deencapsulator(const char *str, int field_to_ret) {
 }
 
 
-struct packet *create_packet(enum msg_type tm=TXT) 
+struct packet *create_packet() 
 {
 	struct packet *np = (struct packet*)malloc(sizeof(struct packet));
 	if (np == NULL)
@@ -77,7 +77,7 @@ struct packet *create_packet(enum msg_type tm=TXT)
 	np->ptype = 0;
 	np->sender_id = -1;
 	np->receiver_id = -1;
-	np->tmsg = tm;
+	np->tmsg = TXT;
 	np->msg = NULL;
 	
 	return np;
@@ -99,13 +99,13 @@ int set_packet_send_id(struct packet *pk, int sender) {
 int set_packet_recv_id(struct packet *pk, int receiver) {
 	if ( pk != NULL && receiver >= 0 ) {
 		pk->receiver_id = receiver;
-		return EXIT_SUCCESS
+		return EXIT_SUCCESS;
 	} else 
 		return EXIT_FAILURE;
 }
 
 
-int set_packet_msg(struct packet *pk, const void *msg) {
+int set_packet_msg(struct packet *pk, void *msg) {
 	if (pk == NULL) {
 		free(msg);
 		return EXIT_FAILURE;
@@ -154,7 +154,7 @@ const struct packet *string_to_packet(const char *str) {
 	
 	mem = pk_deencapsulator(str, MSG_FIELD);
 	if (mem) {
-		np->msg = msg;
+		np->msg = mem;
 	}
 	
 	return np;

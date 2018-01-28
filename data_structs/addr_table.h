@@ -2,6 +2,7 @@
 #define ADDR_TABLE_H
 
 #include <stdlib.h>
+#include <pthread.h>
 
 typedef struct _addr {
     unsigned userid;  //The userid

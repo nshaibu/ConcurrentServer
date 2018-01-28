@@ -1,8 +1,10 @@
 #if ! defined(QUEUE_H)
 #define QUEUE_H
 	
+	#include "../data_structs/packets.h"
+	
 	struct queue_node {
-		void *data;
+		struct packet *data;
 		struct queue_node *next;
 	};
 	
@@ -14,8 +16,10 @@
 
 	Generic_queue *create_queue();
 
-	void *dequeue(Generic_queue *);
+	struct packet *dequeue(Generic_queue *);
 
-	void enqueue(Generic_queue *node, void *data);
+	void enqueue(Generic_queue *node, struct packet *data);
+	
+	void destroy_queue(Generic_queue *Q);
 	
 #endif
