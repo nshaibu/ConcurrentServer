@@ -1,7 +1,10 @@
 #include "addr_table.h"
 
 static int addrTable_len = 0;
+
 static Addr_Table addrs[MAX_ADDR_TABLE_SIZE] = {0};
+
+static pthread_mutex_t addrTable_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int binary_search(int key) {
 	int low = 0, hi = addrTable_len;

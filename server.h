@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -18,6 +19,12 @@
 
 #define _TRY_
 
+#ifdef SOMAXCONN
+#define MAX_CONN SOMAXCONN
+#else
+#define MAX_CONN 100
+#endif
+
 typedef struct net_info {
     char ip_addr[16];
     int port;
@@ -25,8 +32,16 @@ typedef struct net_info {
 } *serverDataPtr, serverData;
 
 
+struct mysql_info {
+	char server_name[20];
+	char user_name[20];
+	char user_password[20];
+	char database_name[20];
+};
+
 void set_net_data(int port, const char *ip);
-//sem_t *get_bin_semphore();
+
+void set_mysql_data(const char *serv, const char *user, const char *pwd, const char *dbname);
 
 void make_server(void);
 
