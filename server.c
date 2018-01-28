@@ -83,13 +83,13 @@ void make_server() {
 	}
 	
 	if (! mysql_real_connect( mysql_con,
-									  my_info.server_name,
-									  my_info.user_name,
-									  my_info.user_password,
-									  NULL,
-									  0, 
-									  NULL,
-									  0
+                             my_info.server_name,
+                             my_info.user_name,
+                             my_info.user_password,
+                             NULL,
+                             0, 
+                             NULL,
+                             0
 									)
 	) {
 			fprintf(stderr, "%s\n", mysql_error(mysql_con));
@@ -98,9 +98,9 @@ void make_server() {
 	
 	//check whether database exist
 	sprintf( db_query, 
-			   "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '%s'",
-			   my_info.database_name
-			 );
+            "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '%s'",
+            my_info.database_name
+          );
 			
 	if ( mysql_query(mysql_con, db_query) != 0 ) {
 		fprintf(stderr, "%s\n", mysql_error(mysql_con));
@@ -120,22 +120,22 @@ void make_server() {
 		
 		memset(db_query, '\0', sizeof(db_query));
 		sprintf( db_query,
-				   "CREATE TABLE %s.users ( \
-				     userid INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-				     username VARCHAR(20) NOT NULL, \
-				     userpasswd VARCHAR(20) NOT NULL \
-				   )",
-				   my_info.database_name
-				 );
+               "CREATE TABLE %s.users ( \
+                userid INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, \
+                username VARCHAR(20) NOT NULL, \
+                userpasswd VARCHAR(20) NOT NULL \
+               )",
+               my_info.database_name
+             );
 		mysql_query(mysql_con, db_query);
 		
 		memset(db_query, '\0', sizeof(db_query));
 		sprintf( db_query,
-				   "CREATE TABLE %s.messages ( \
-				    msg_userid INTEGER NOT NULL, \
-				    message VARCHAR(100) NOT NULL \
-				   )",
-				   my_info.database_name
+               "CREATE TABLE %s.messages ( \
+                msg_userid INTEGER NOT NULL, \
+                message VARCHAR(100) NOT NULL \
+               )",
+               my_info.database_name
 				 );
 		mysql_query(mysql_con, db_query);
 		
