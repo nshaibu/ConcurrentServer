@@ -6,6 +6,7 @@
 #include <pthread.h>
 
 #include "../libs/queue.h"
+#include "../error_logs/errno_logs.h"
 
 enum node_op_type {
 	THREAD_IN,    /*Write operation*/

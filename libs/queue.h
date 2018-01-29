@@ -1,8 +1,9 @@
 #if ! defined(QUEUE_H)
 #define QUEUE_H
-	#include <pthread.h>
+#include <pthread.h>
 	
-	#include "../data_structs/packets.h"
+#include "../error_logs/errno_logs.h"
+#include "../data_structs/packets.h"
 	
 	struct queue_node {
 		struct packet *data;

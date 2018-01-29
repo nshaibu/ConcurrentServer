@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "./error_logs/errno_logs.h"
 #include "./data_structs/thread_info_block.h"
 #include "./libs/iterator.h"
 

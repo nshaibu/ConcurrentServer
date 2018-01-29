@@ -1,6 +1,8 @@
 #ifndef PACKETS_H
 #define PACKETS_H
 
+#include "../error_logs/errno_logs.h"
+
 enum msg_type 
 {
 	TXT,

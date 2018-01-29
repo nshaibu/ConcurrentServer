@@ -64,8 +64,8 @@ static void sig_handler(int sig) {
 void make_server() {
 	struct thread_block *thr_node; //Thread info nodes
 	
-	MYSQL *mysql_con;			//main mysql server connection handler
-	MYSQL_RES *mysql_res;
+	MYSQL *mysql_con = NULL;			//main mysql server connection handler
+	MYSQL_RES *mysql_res = NULL;
 	char db_query[100];
 	
 	int connection_socket, ret, size;
@@ -78,10 +78,16 @@ void make_server() {
 	
 	mysql_con = mysql_init(NULL);
 	if (mysql_con == NULL) {
-		fprintf(stderr, "%s\n", mysql_error(mysql_con));
-		exit(EXIT_FAILURE);
-	}
-	
+		log_errors( NULL,
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_INIT_FAILED, 
+                  mysql_con,
+                  (void (*)(void*))mysql_close);
+   }
+
 	if (! mysql_real_connect( mysql_con,
                              my_info.server_name,
                              my_info.user_name,
@@ -92,8 +98,14 @@ void make_server() {
                              0
 									)
 	) {
-			fprintf(stderr, "%s\n", mysql_error(mysql_con));
-			exit(EXIT_FAILURE);
+		log_errors( NULL,
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_INIT_FAILED, 
+                  mysql_con,
+                  (void (*)(void*))mysql_close);
 	}
 	
 	//check whether database exist
@@ -103,8 +115,14 @@ void make_server() {
           );
 			
 	if ( mysql_query(mysql_con, db_query) != 0 ) {
-		fprintf(stderr, "%s\n", mysql_error(mysql_con));
-		exit(EXIT_FAILURE);
+		log_errors( NULL,
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_INIT_FAILED, 
+                  mysql_con, 
+                  (void (*)(void*))mysql_close);
 	}
 	
 	//check result of the query executed
@@ -147,8 +165,14 @@ void make_server() {
 	sa.sa_handler = sig_handler;
 	
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(EXIT_FAILURE);
+		log_errors( NULL,
+                  STD_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  SIGNAL_FAILED, 
+                  NULL, 
+                  error_ignore);
 	}
 	
 	
@@ -161,8 +185,14 @@ void make_server() {
 	}
 	
 	if ( (net_info.socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) { 
-		perror("socket");
-		exit(EXIT_FAILURE);
+		log_errors( NULL,
+                  STD_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  SOCKET_NOT_CREATED, 
+                  &(net_info.socket), 
+                  error_close_fd);
 	}
 	
 	serv_addr.sin_family = AF_INET;
@@ -171,8 +201,14 @@ void make_server() {
 	
 	
 	if ( bind(net_info.socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0 ) {
-		perror("bind");
-		exit(EXIT_FAILURE);
+		log_errors( NULL,
+                  STD_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  SOCKET_BINDING_FAILED, 
+                  &(net_info.socket), 
+                  error_close_fd);
 	}
 	
 	listen(net_info.socket, MAX_CONN);
@@ -190,7 +226,14 @@ void make_server() {
 			if ( thread_count <= MAX_CONN ) {
 				ret = pthread_create(&tid[thread_count], &pattr, connection_handler, (void*)thr_node); 
 				if ( ret != 0 ) {
-					fprintf(stderr, "%s %s %d\n", "Failed to start handler", __FILE__, __LINE__);
+					log_errors( NULL,
+                           STD_ERRORS, 
+                           DONT_EXIT, 
+                           WRITE_STDDER, 
+                           LOGS_WARNING, 
+                           THREAD_NOT_START, 
+                           NULL, 
+                           error_ignore);
 					destroy_thread_node(thr_node);
 				
 				}else {
@@ -226,7 +269,6 @@ void make_server() {
 		set_mysql_data("localhost", "root", "1993naf", "concurrent_chat");
 		make_server();
 		
-		//sem_destroy(get_bin_semphore());
 		return 0;
 	}
 #endif
