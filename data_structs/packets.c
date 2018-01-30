@@ -5,7 +5,7 @@
 
 #include "packets.h"
 
-static const char *make_message(const char *fmt, ...) {
+static char *make_message(const char *fmt, ...) {
 	int size = 0;
 	char *p = NULL;
 	va_list ap;
@@ -77,19 +77,19 @@ struct packet *create_packet()
 	np->ptype = 0;
 	np->sender_id = -1;
 	np->receiver_id = -1;
-	np->tmsg = TXT;
+	np->tmsg = TXT_DATA;
 	np->msg = NULL;
 	
 	return np;
 }
 
-void set_packet_type(struct packet *pk, unsigned type) {
+void set_packet_type(struct packet *pk, msg_type type) {
 	if (pk != NULL)
 		pk->ptype = type;
 }
 
 int set_packet_send_id(struct packet *pk, int sender) {
-	if ( pk != NULL && sender >= 0 ) {
+	if ( pk != NULL ) {
 		pk->sender_id = sender;
 		return EXIT_SUCCESS;
 	} else 
@@ -97,7 +97,7 @@ int set_packet_send_id(struct packet *pk, int sender) {
 }
 
 int set_packet_recv_id(struct packet *pk, int receiver) {
-	if ( pk != NULL && receiver >= 0 ) {
+	if ( pk != NULL ) {
 		pk->receiver_id = receiver;
 		return EXIT_SUCCESS;
 	} else 
@@ -116,13 +116,18 @@ int set_packet_msg(struct packet *pk, void *msg) {
 }
 
 
-const char *packet_to_string(struct packet *pk) {
+char *packet_to_string(struct packet *pk) {
 	return ( pk == NULL )? NULL : \
-				make_message("|%d|%d|%d|%d|%s|", pk->ptype, pk->sender_id, pk->receiver_id, pk->tmsg, (char*)pk->msg);
+			  make_message( "|%d|%d|%d|%d|%s|",    /*packet format eg.|25|5|6|2|DATA|*/
+                         pk->ptype, 
+                         pk->sender_id, 
+                         pk->receiver_id, 
+                         pk->tmsg, 
+                         (char*)pk->msg);
 }
 
-const struct packet *string_to_packet(const char *str) {
-	char *mem;
+struct packet *string_to_packet(const char *str) {
+	char *mem = NULL;
 	
 	struct packet *np = (struct packet *)malloc(sizeof(struct packet));
 	if (np == NULL)
