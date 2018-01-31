@@ -37,10 +37,16 @@
 #endif
 
 //define log msgs
+#define MEMORY_NOT_ALLOC "Cannot not allocate memory"
+#define MAX_CON_REACH "Maximum connection reached"
 #define THREAD_NOT_START "Cannot start thread"
 #define SOCKET_BINDING_FAILED "Failed to bind to socket"
 #define SOCKET_NOT_CREATED "Cannot create tcp socket"
 #define MYSQL_INIT_FAILED "Cannot initialize mysql structure"
+#define MYSQL_CONNECTION_FAILED "Failed to connect to the mysql server"
+#define MYSQL_QUERY_FAILED "mysql query execution failed"
+#define MYSQL_RESULT_CANT_READ "Cannot not read mysql query result"
+#define MYSQL_NO_USER "No such user on the system(mysql)"
 #define SIGNAL_FAILED "Setting up unix signal failed"
 
 

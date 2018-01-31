@@ -6,6 +6,8 @@ static Addr_Table addrs[MAX_ADDR_TABLE_SIZE] = {0};
 
 static pthread_mutex_t addrTable_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+int get_addr_table_len() { return addrTable_len; }
+
 static int binary_search(int key) {
 	int low = 0, hi = addrTable_len;
 	if (key < 0) return -1;
@@ -56,23 +58,20 @@ void *removeFromAddrTable(unsigned id) {
 	return hold;
 }
 
-
-#ifdef TRY
-#include <stdio.h>
-
-int main() {
-    int a = 2;
-    insertInAddrTable(2, &a);
-    int b = 4;
-    insertInAddrTable(1, &b);
-    int c = 47;
-    insertInAddrTable(41, &c);
-    int d = 12;
-    insertInAddrTable(12, &d);
-    int e = 45;
-    insertInAddrTable(23, &e);
-    
-    int *v = (int*)getAddrFromaddrTable(1);
-    printf("%d\n", *v);
+void destroy_addrTable() {
+	
+	pthread_mutex_lock(&addrTable_mutex);
+	
+	if ( addrTable_len != 0 )
+		for ( int i=addrTable_len-1; i>=0; --i ) {
+			struct thread_block *node = (struct thread_block*)addrs[i].addr_;
+			node->user_auth = USER_TO_EXIT;
+		}
+	
+	pthread_mutex_unlock(&addrTable_mutex);
+	
+	pthread_mutex_destroy(&addrTable_mutex);
 }
-#endif
+
+
+

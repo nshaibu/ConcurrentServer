@@ -18,14 +18,24 @@
 
 #include "./error_logs/errno_logs.h"
 #include "./data_structs/thread_info_block.h"
-#include "./libs/iterator.h"
-
+#include "./data_structs/addr_table.h"
+#include "./data_structs/packets.h"
 
 #ifdef SOMAXCONN
 #define MAX_CONN SOMAXCONN
 #else
 #define MAX_CONN 100
 #endif
+
+#ifndef MYSQL_QUERY_BUFF
+#define MYSQL_QUERY_BUFF 100
+#endif
+
+#if !defined ( NAME_BUF_SIZE ) || ! defined ( PASSWD_BUF_SIZE )
+#define NAME_BUF_SIZE 50
+#define PASSWD_BUF_SIZE 70
+#endif
+
 
 typedef struct net_info {
     char ip_addr[16];
@@ -40,6 +50,8 @@ struct mysql_info {
 	char user_password[20];
 	char database_name[20];
 };
+
+const struct mysql_info *get_mysql_info_struct();   //get mysql information from here
 
 void set_net_data(int port, const char *ip);
 

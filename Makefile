@@ -26,7 +26,7 @@ packets.o: ./data_structs/packets.c
 	$(CC) $(DEFS) $(OPTS) -c ./data_structs/packets.c $(MYSQL_LIBS)
 
 addr_table.o: ./data_structs/addr_table.c
-	$(CC) $(DEFS) $(OPTS) -c ./data_structs/addr_table.c
+	$(CC) $(DEFS) $(OPTS) -c ./data_structs/addr_table.c $(MYSQL_LIBS)
 
 errno_logs.o: ./error_logs/errno_logs.c
 	$(CC) $(DEFS) $(OPTS) -c ./error_logs/errno_logs.c $(MYSQL_LIBS)

@@ -8,6 +8,12 @@
 #include "../libs/queue.h"
 #include "../error_logs/errno_logs.h"
 
+#if !defined ( NAME_BUF_SIZE ) || ! defined ( PASSWD_BUF_SIZE ) || ! defined ( MSG_BUFF_SIZE )
+#define NAME_BUF_SIZE 50
+#define PASSWD_BUF_SIZE 70
+#define MSG_BUFF_SIZE 1000
+#endif
+
 enum node_op_type {
 	THREAD_IN,    /*Write operation*/
 	THREAD_KILL,  /*Remove Node*/
@@ -15,6 +21,11 @@ enum node_op_type {
 	THREAD_NOOP
 };
 
+typedef enum { 
+	USER_NOT_AUTH,     /*user not authenticated yet*/
+	USER_AUTH,         /*user authenticated*/
+	USER_TO_EXIT       /*authenticated user exit*/
+} user_auth_level;
 
 //Geolocation struct
 struct geoloc {
@@ -25,8 +36,12 @@ struct geoloc {
 
 struct thread_block {
 	unsigned socket;       /* Thread's socket */
-	pthread_t tid;    /* Main thread's id */
-	pthread_t sub_tid; /* Sub-thread id for thread to poll on socket*/
+	pthread_t tid;    /* thread's id */
+	
+	/*user data*/
+	int userid;      /*authenticated userid for this thread*/
+	char user_name[NAME_BUF_SIZE]; /*authenticated username for this thread*/
+	user_auth_level user_auth;     /*Determine whether the user has been authenticated or exit loop(listening polling)*/
 	
 	MYSQL *con;     /*mysql connection handler for the thread*/
 	
@@ -43,7 +58,7 @@ struct thread_block {
 	*/
 	enum node_op_type node_op;
 	Generic_queue *in_queue;
-	Generic_queue *out_queue;
+	//Generic_queue *out_queue;
 };
 
 #define check_queue_init(Q) ( (Q) == NULL )
@@ -53,7 +68,7 @@ time_t get_curr_time(void);
 //constructor and destructor
 struct thread_block *create_thread_node(unsigned tid, unsigned sockfd);
 
-int destroy_thread_node(struct thread_block *node);
+void destroy_thread_node(struct thread_block *node);
 
 
 //Operations:
@@ -68,7 +83,7 @@ const struct geoloc *get_geolocation(struct thread_block *node);
 
 
 //inbox and the sendbox operations
-void set_outQueue(struct thread_block *, Generic_queue *);
+//void set_outQueue(struct thread_block *, Generic_queue *);
 
 void set_inQueue(struct thread_block *, Generic_queue *);
 

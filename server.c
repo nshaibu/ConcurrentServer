@@ -17,7 +17,6 @@ static struct mysql_info my_info;		//mysql server connection information
 static int kill_server = 0;					/*if none zero, kill server*/
 
 
-
 static void *connection_handler(void *data) {
 	struct thread_block *thread_node = (struct thread_block*)data;
 	int i = 0, client = thread_node->curr_time();
@@ -25,7 +24,8 @@ static void *connection_handler(void *data) {
 	
 	sprintf(buff, "%s::%d", "hello world", client);
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+	
 	
 	while (1) {
 		//sprintf(buff, "client on server are %d", get_list_height());
@@ -33,12 +33,16 @@ static void *connection_handler(void *data) {
 		send(thread_node->socket, buff, strlen(buff), MSG_DONTWAIT);
 		sleep(4);
 		
-		if (i == 10) break;
+		//if (thread_node->user_auth == USER_TO_EXIT) break;
+		
+		if (i == 5) break;
 		++i;
 	}
+	//write(thread_node->socket, "Got here\n", 10);
 	shutdown(thread_node->socket, 2);
-	//close(thread_node->data->threads_socket);
-	pthread_cancel(pthread_self());
+	//close(thread_node->socket);
+	//pthread_cancel(pthread_self());
+	destroy_thread_node(thread_node);
 	return NULL;
 }
 
@@ -56,17 +60,22 @@ void set_mysql_data(const char *serv, const char *user, const char *pwd, const c
 	strcpy(my_info.database_name, dbname);
 }
 
+/*get mysql server connection info from any file*/
+const struct mysql_info *get_mysql_info_struct() {
+	return &my_info;
+}
+
 
 static void sig_handler(int sig) {
-	++kill_server;
+	kill_server = 23;
 }
 
 void make_server() {
-	struct thread_block *thr_node; //Thread info nodes
+	struct thread_block *thr_node = NULL; //Thread info nodes
 	
 	MYSQL *mysql_con = NULL;			//main mysql server connection handler
 	MYSQL_RES *mysql_res = NULL;
-	char db_query[100];
+	char db_query[MYSQL_QUERY_BUFF];
 	
 	int connection_socket, ret, size;
 	int thread_count = 0;   //thread count
@@ -103,7 +112,7 @@ void make_server() {
                   DO_EXIT, 
                   WRITE_STDDER, 
                   LOGS_FATAL_ERRORS, 
-                  MYSQL_INIT_FAILED, 
+                  MYSQL_CONNECTION_FAILED, 
                   mysql_con,
                   (void (*)(void*))mysql_close);
 	}
@@ -120,7 +129,7 @@ void make_server() {
                   DO_EXIT, 
                   WRITE_STDDER, 
                   LOGS_FATAL_ERRORS, 
-                  MYSQL_INIT_FAILED, 
+                  MYSQL_QUERY_FAILED, 
                   mysql_con, 
                   (void (*)(void*))mysql_close);
 	}
@@ -140,22 +149,41 @@ void make_server() {
 		sprintf( db_query,
                "CREATE TABLE %s.users ( \
                 userid INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                username VARCHAR(20) NOT NULL, \
-                userpasswd VARCHAR(20) NOT NULL \
+                username VARCHAR(%d) NOT NULL, \
+                userpasswd VARCHAR(%d) NOT NULL \
                )",
-               my_info.database_name
+               my_info.database_name, NAME_BUF_SIZE, PASSWD_BUF_SIZE
              );
-		mysql_query(mysql_con, db_query);
+		if ( mysql_query(mysql_con, db_query) !=0) {
+			log_errors( NULL,
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_QUERY_FAILED, 
+                  mysql_con, 
+                  (void (*)(void*))mysql_close);
+		}
 		
 		memset(db_query, '\0', sizeof(db_query));
 		sprintf( db_query,
                "CREATE TABLE %s.messages ( \
                 msg_userid INTEGER NOT NULL, \
-                message VARCHAR(100) NOT NULL \
+                msg_type VARCHAR(6) NOT NULL, \
+                message VARCHAR(%d) NOT NULL \
                )",
-               my_info.database_name
+               my_info.database_name, MAX_DATA_SIZE
 				 );
-		mysql_query(mysql_con, db_query);
+		if ( mysql_query(mysql_con, db_query) !=0 ) {
+			log_errors( NULL,
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_QUERY_FAILED, 
+                  mysql_con, 
+                  (void (*)(void*))mysql_close);
+		}
 		
 		mysql_free_result(mysql_res);
 	}
@@ -164,7 +192,7 @@ void make_server() {
 	sa.sa_flags = 0;
 	sa.sa_handler = sig_handler;
 	
-	if (sigaction(SIGINT, &sa, NULL) == -1) {
+	if ( sigaction(SIGINT, &sa, NULL) == -1 ) {
 		log_errors( NULL,
                   STD_ERRORS, 
                   DO_EXIT, 
@@ -176,7 +204,7 @@ void make_server() {
 	}
 	
 	
-	if ( pthread_attr_init(&pattr) ) {
+	if ( pthread_attr_init(&pattr) == 0 ) {
 		pthread_attr_setdetachstate(&pattr, PTHREAD_CREATE_JOINABLE);
 		pthread_attr_setschedpolicy(&pattr, SCHED_OTHER);
 		pthread_attr_setscope(&pattr, PTHREAD_SCOPE_SYSTEM);
@@ -218,6 +246,16 @@ void make_server() {
 		
 		size = sizeof(cli_addr);
 		connection_socket = accept(net_info.socket, (struct sockaddr*)&cli_addr, (socklen_t*)&size);
+		if ( connection_socket < 0 ) {
+			log_errors( NULL,
+                     STD_ERRORS, 
+                     DONT_EXIT, 
+                     NO_WRITE, 
+                     LOGS_WARNING, 
+                     SOCKET_NOT_CREATED, 
+                     &connection_socket, 
+                     error_close_fd );
+		}
 		
 		thr_node = create_thread_node(-1, connection_socket);
 		
@@ -229,31 +267,36 @@ void make_server() {
 					log_errors( NULL,
                            STD_ERRORS, 
                            DONT_EXIT, 
-                           WRITE_STDDER, 
+                           NO_WRITE, 
                            LOGS_WARNING, 
                            THREAD_NOT_START, 
                            NULL, 
-                           error_ignore);
+                           error_ignore );
 					destroy_thread_node(thr_node);
 				
-				}else {
+				} else {
 					set_thread_node_tid(thr_node, tid[thread_count]); 
 				}
 				
 			} else {
-				destroy_thread_node(thr_node);
+					log_errors( NULL,
+                  STD_ERRORS, 
+                  DONT_EXIT, 
+                  NO_WRITE, 
+                  LOGS_INFO, 
+                  MAX_CON_REACH, 
+                  thr_node, 
+                  (void(*)(void*))destroy_thread_node);
 			}
 			
 			thread_count++;
 		}
 	}
 	
-	for (int i=0; i<thread_count; i++)
-		pthread_cancel(tid[i]);
+	//destroy_addrTable();   //asked the threads to stop
 	
-	for (int i=0; i<thread_count; i++) 
-		pthread_join(tid[i], NULL);
-	
+	for (int i=0; i<thread_count; i++) pthread_cancel(tid[i]);
+	for (int i=0; i<thread_count; i++) pthread_join(tid[i], NULL);
 	pthread_attr_destroy(&pattr);
 	
 	mysql_close(mysql_con);
