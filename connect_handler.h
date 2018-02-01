@@ -18,7 +18,7 @@
 #endif
 
 
-static int authenticator(struct thread_block *blk, const char *name, const char *passwd);
+//static int authenticator(struct thread_block *blk, const char *name, const char *passwd);
 
 void *connection_handler(void *data);
 

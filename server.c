@@ -12,39 +12,10 @@ static struct sockaddr_in cli_addr;		//client address struct
 
 static serverData net_info;			//server informations
 
-static struct mysql_info my_info;		//mysql server connection information
+struct mysql_info my_info;		//mysql server connection information
 
 static int kill_server = 0;					/*if none zero, kill server*/
 
-
-static void *connection_handler(void *data) {
-	struct thread_block *thread_node = (struct thread_block*)data;
-	int i = 0, client = thread_node->curr_time();
-	char buff[20];
-	
-	sprintf(buff, "%s::%d", "hello world", client);
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-	
-	
-	while (1) {
-		//sprintf(buff, "client on server are %d", get_list_height());
-		//send(thread_node->data->threads_socket, buff, sizeof(buff), MSG_DONTWAIT);
-		send(thread_node->socket, buff, strlen(buff), MSG_DONTWAIT);
-		sleep(4);
-		
-		//if (thread_node->user_auth == USER_TO_EXIT) break;
-		
-		if (i == 5) break;
-		++i;
-	}
-	//write(thread_node->socket, "Got here\n", 10);
-	shutdown(thread_node->socket, 2);
-	//close(thread_node->socket);
-	//pthread_cancel(pthread_self());
-	destroy_thread_node(thread_node);
-	return NULL;
-}
 
 void set_net_data(int port, const char *ip) {
 	net_info.socket = -1;
@@ -61,9 +32,9 @@ void set_mysql_data(const char *serv, const char *user, const char *pwd, const c
 }
 
 /*get mysql server connection info from any file*/
-const struct mysql_info *get_mysql_info_struct() {
-	return &my_info;
-}
+/*const struct mysql_info *get_mysql_info_struct() {*/
+/*	return &my_info;*/
+/*}*/
 
 
 static void sig_handler(int sig) {

@@ -7,6 +7,7 @@
 
 #include "../libs/queue.h"
 #include "../error_logs/errno_logs.h"
+#include "../server.h"
 
 #if !defined ( NAME_BUF_SIZE ) || ! defined ( PASSWD_BUF_SIZE ) || ! defined ( MSG_BUFF_SIZE )
 #define NAME_BUF_SIZE 50

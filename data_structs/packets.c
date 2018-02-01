@@ -119,11 +119,11 @@ int set_packet_msg(struct packet *pk, void *msg) {
 char *packet_to_string(struct packet *pk) {
 	return ( pk == NULL )? NULL : \
 			  make_message( "|%d|%d|%d|%d|%s|",    /*packet format eg.|25|5|6|2|DATA|*/
-                         pk->ptype, 
-                         pk->sender_id, 
-                         pk->receiver_id, 
-                         pk->tmsg, 
-                         (char*)pk->msg);
+                         pk->ptype,             /*if the header is having 4 chars for */
+                         pk->sender_id,         /* each field then the max size of the */
+                         pk->receiver_id,       /* header is 21 chars i.e /0000/0000/0000/0000/.*/
+                         pk->tmsg,              /* So the rest belongs to the DATA field. Thus*/
+                         (char*)pk->msg);       /* the max data size is 200-21 = 179chars */
 }
 
 struct packet *string_to_packet(const char *str) {

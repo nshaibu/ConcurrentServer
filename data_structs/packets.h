@@ -22,15 +22,21 @@ typedef enum {
 	COORD_DATA        /*coordinate data [format data1:data2]*/
 } msg_type;
 
+#if !defined ( MAX_PACKET_SIZE ) || !defined ( MAX_DATA_SIZE )
+#define MAX_PACKET_SIZE 200
+#define MAX_DATA_SIZE MAX_PACKET_SIZE - 21
+#endif
+
 //Packet types 
-#define NEG_PACKET 24    /*negotiation and authentication packet*/
-#define GEO_PACKET 25    /*geolocation packet*/
-#define MSG_PACKET 26    /*message packet for both text and media files*/
-#define ACK_PACKET 27    /*acknowledge packet*/
+#define NEG_PACKET 10    /*negotiation and authentication packet*/
+#define GET_GEO_PACKET 20    /*get geolocation packet*/
+#define SET_GEO_PACKET 21    /*set geolocation packet*/
+#define MSG_PACKET 30    /*message packet for both text and media files*/
+#define ACK_PACKET 40    /*acknowledge packet*/
 
 
 //field specifiers for deencapsulator
-#define PTYPE_FIELD 1
+#define PTYPE_FIELD 1 
 #define SENDER_ID_FIELD 2 
 #define RECEIVER_ID_FIELD 3
 #define MSGTYPE_FIELD 4

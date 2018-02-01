@@ -6,6 +6,8 @@
 
 #include "thread_info_block.h"
 
+extern pthread_mutex_t addrTable_mutex;
+
 typedef struct _addr {
     unsigned userid;  //The userid
     void *addr_;       //The address of the iterator user by the userid

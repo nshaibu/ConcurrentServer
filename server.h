@@ -20,6 +20,7 @@
 #include "./data_structs/thread_info_block.h"
 #include "./data_structs/addr_table.h"
 #include "./data_structs/packets.h"
+#include "connect_handler.h"
 
 #ifdef SOMAXCONN
 #define MAX_CONN SOMAXCONN
@@ -51,7 +52,9 @@ struct mysql_info {
 	char database_name[20];
 };
 
-const struct mysql_info *get_mysql_info_struct();   //get mysql information from here
+extern struct mysql_info my_info;
+
+//const struct mysql_info *get_mysql_info_struct();   //get mysql information from here
 
 void set_net_data(int port, const char *ip);
 

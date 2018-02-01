@@ -4,7 +4,7 @@ static int addrTable_len = 0;
 
 static Addr_Table addrs[MAX_ADDR_TABLE_SIZE] = {0};
 
-static pthread_mutex_t addrTable_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t addrTable_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int get_addr_table_len() { return addrTable_len; }
 
@@ -34,6 +34,8 @@ void insertInAddrTable(unsigned id, void *addr) {
     addrs[k+1].userid = id;
     addrs[k+1].addr_ = addr;
     ++addrTable_len;
+    
+    pthread_mutex_unlock(&addrTable_mutex);
 }
 
 void *getAddrFromaddrTable(unsigned id) {
@@ -60,8 +62,6 @@ void *removeFromAddrTable(unsigned id) {
 
 void destroy_addrTable() {
 	
-	pthread_mutex_lock(&addrTable_mutex);
-	
 	if ( addrTable_len != 0 )
 		for ( int i=addrTable_len-1; i>=0; --i ) {
 			struct thread_block *node = (struct thread_block*)addrs[i].addr_;
@@ -69,8 +69,6 @@ void destroy_addrTable() {
 		}
 	
 	pthread_mutex_unlock(&addrTable_mutex);
-	
-	pthread_mutex_destroy(&addrTable_mutex);
 }
 
 

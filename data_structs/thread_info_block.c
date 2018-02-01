@@ -31,7 +31,37 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
 	node->userid = -1;
 	node->user_auth = USER_AUTH;//USER_NOT_AUTH;
 	
-	node->con = NULL;
+	node->con = mysql_init(NULL);
+	if ( node->con == NULL ) {
+		log_errors( &(node->tid),
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_INIT_FAILED, 
+                  node,
+                  (void (*)(void*))destroy_thread_node);
+   }
+
+	if (! mysql_real_connect( node->con,
+                             my_info.server_name,
+                             my_info.user_name,
+                             my_info.user_password,
+                             NULL,
+                             0, 
+                             NULL,
+                             0
+									)
+	) {
+		log_errors( &(node->tid),
+                  MYSQL_ERRORS, 
+                  DO_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  MYSQL_CONNECTION_FAILED, 
+                  node,
+                  (void (*)(void*))destroy_thread_node );
+   }
 	
 	node->loc.longitude = -1;
 	node->loc.lattitude = -1;
