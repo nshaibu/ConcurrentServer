@@ -41,7 +41,7 @@ struct thread_block {
 	
 	/*user data*/
 	int userid;      /*authenticated userid for this thread*/
-	char user_name[NAME_BUF_SIZE]; /*authenticated username for this thread*/
+	char username[NAME_BUF_SIZE]; /*authenticated username for this thread*/
 	user_auth_level user_auth;     /*Determine whether the user has been authenticated or exit loop(listening polling)*/
 	
 	MYSQL *con;     /*mysql connection handler for the thread*/

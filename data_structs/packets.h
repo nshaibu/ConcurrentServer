@@ -33,7 +33,8 @@ typedef enum {
 #define SET_GEO_PACKET 21    /*set geolocation packet*/
 #define MSG_PACKET 30    /*message packet for both text and media files*/
 #define ACK_PACKET 40    /*acknowledge packet*/
-
+#define SYN_PACKET 41    /*synchronization packet*/
+#define FIN_PACKET 42    /*Finishing packet*/
 
 //field specifiers for deencapsulator
 #define PTYPE_FIELD 1 
@@ -53,6 +54,10 @@ struct packet {
 };
 
 char *pk_deencapsulator(const char *str, int field_to_ret);    /*DeEncapsulates packets*/			
+
+//char **get_tokens(char *str, const char *sep, int *len );    /*Break string into tokens and return an array of char* */
+//void token_free(char **token_arr);   /*Release the resource of the array return from get_token call*/
+
 
 struct packet *create_packet();
 

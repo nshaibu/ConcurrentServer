@@ -35,7 +35,7 @@ void init_logs_object()
 
 
 void log_errors(
-                pthread_t *thread_id,              /*The Thread id [if not thread then assign -1]*/
+                pthread_t *thread_id,       /*The Thread id [if not thread then assign NULL]*/
                 error_type errtype,         /*Error type whether [MYSQL_ERRORS/STD_ERRORS]*/
                 do_exit ex,                 /*Determine whether to exit the program [DO_EXIT/DONT_EXIT]*/
                 write_ops op,               /*The stream struct to write to [WRITE_STDOUT/WRITE_STDDER/WRITE_BOTH_STDOUT_STDERR]*/
@@ -93,18 +93,17 @@ void log_errors(
 	pthread_mutex_unlock( &(logs.log_mutex) );
 	
 	if ( ex == DO_EXIT) {
-		dtor(Object);
+		dtor(Object);    //destroy object
 		
 		if (thread_id == NULL) 
 			exit(EXIT_FAILURE);
 		else
-			pthread_cancel(*thread_id);
+			pthread_cancel( (pthread_t)*thread_id );
 	}
 }
 
 
 void destroy_logs_object() {
-	//close(logs.fd_log);
 	fclose(logs.stdlog);
 	
 	pthread_mutex_destroy( &(logs.log_mutex) );

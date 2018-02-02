@@ -34,7 +34,7 @@ void enqueue(Generic_queue *Q, struct packet *data) {
 		Q->tail = np;
 	}
 	
-	pthread_mutex_unlock( &(Q->queue_lock) );
+	//pthread_mutex_unlock( &(Q->queue_lock) );
 }
 
 struct packet *dequeue(Generic_queue *Q) {
@@ -50,7 +50,7 @@ struct packet *dequeue(Generic_queue *Q) {
 	
 	free(temp);
 	
-	pthread_mutex_unlock( &(Q->queue_lock) );
+	//pthread_mutex_unlock( &(Q->queue_lock) );
 	
 	return hold;
 } 
@@ -58,11 +58,13 @@ struct packet *dequeue(Generic_queue *Q) {
 void destroy_queue(Generic_queue *Q) {
 	struct packet *pk;
 	
+	pthread_mutex_lock( &(Q->queue_lock) );
 	while ( !empty(Q) ) {
-		pthread_mutex_lock( &(Q->queue_lock) );   //lock queue mutex 
+		   //lock queue mutex 
 		pk = dequeue(Q);
 		destroy_packet(pk);
 	}
+	pthread_mutex_unlock( &(Q->queue_lock) );
 	
 	pthread_mutex_destroy(&(Q->queue_lock));
 }

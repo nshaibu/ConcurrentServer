@@ -29,7 +29,8 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
 	node->node_op = THREAD_NOOP;
 	
 	node->userid = -1;
-	node->user_auth = USER_AUTH;//USER_NOT_AUTH;
+	memset(node->username, '\0', sizeof(node->username));
+	node->user_auth = USER_NOT_AUTH;
 	
 	node->con = mysql_init(NULL);
 	if ( node->con == NULL ) {

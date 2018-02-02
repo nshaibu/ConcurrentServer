@@ -3,7 +3,7 @@
 CC=gcc
 LIBS=-lpthread
 MYSQL_LIBS=`mysql_config --cflags --libs`
-DEFS=-D_REENTRANT -DTRY_CON
+DEFS=-D_REENTRANT #-DTRY_CON
 OPTS=-g -std=gnu99 -Wall #-Werror
 OBJS=addr_table.o packets.o queue.o thread_info_block.o server.o errno_logs.o connect_handler.o
 

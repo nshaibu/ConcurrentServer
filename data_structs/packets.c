@@ -67,6 +67,34 @@ char *pk_deencapsulator(const char *str, int field_to_ret) {
 	return buff;
 }
 
+/*char **get_tokens(char *str, const char *sep, int *len ) {*/
+/*	char *word, *tmp1;*/
+/*	char **arr = NULL;*/
+/*	int i=0;*/
+/*   */
+/*	arr = (char**)malloc(5*sizeof(char*));*/
+/*   */
+/*	word=strtok_r(str, sep, &tmp1);*/
+/*	while(word != NULL) {*/
+/*		arr[i++] = (char*)strdup(word);*/
+/*		word=strtok_r(NULL, sep, &tmp1);*/
+/*	}*/
+/*	arr[i] = NULL;*/
+/*	*/
+/*	if ( len != NULL) *len = i-1;*/
+/*	*/
+/*	return arr;*/
+/*}*/
+
+void token_free(char **token_arr) {
+	while (*token_arr) {
+		free(*token_arr);
+		token_arr++;
+	}
+	
+	free(token_arr);
+}
+
 
 struct packet *create_packet() 
 {
@@ -127,39 +155,41 @@ char *packet_to_string(struct packet *pk) {
 }
 
 struct packet *string_to_packet(const char *str) {
-	char *mem = NULL;
+	char *mem, *word;
+	char tmp[10];
+	char *str_use = strdup(str);
 	
 	struct packet *np = (struct packet *)malloc(sizeof(struct packet));
 	if (np == NULL)
 		return NULL;
 	
-	mem = pk_deencapsulator(str, PTYPE_FIELD);
-	if (mem) {
-		np->ptype = atoi(mem);
-		free(mem);
+	word = strtok_r(str_use, "|", &mem);
+	if ( word != NULL) {
+		strcpy(tmp, word);
+		np->ptype = atoi(word);
 	}
 	
-	mem = pk_deencapsulator(str, SENDER_ID_FIELD);
-	if (mem) {
-		np->sender_id = atoi(mem);
-		free(mem);
+	word = strtok_r(NULL, "|", &mem);
+	if ( word != NULL ) {
+		strcpy(tmp, word);
+		np->sender_id = atoi(word);
 	}
 	
-	mem = pk_deencapsulator(str, RECEIVER_ID_FIELD);
-	if (mem) {
-		np->receiver_id = atoi(mem);
-		free(mem);
+	word = strtok_r(NULL, "|", &mem);
+	if ( word != NULL ) {
+		strcpy(tmp, word);
+		np->receiver_id = atoi(word);
 	}
 	
-	mem = pk_deencapsulator(str, MSGTYPE_FIELD);
-	if (mem) {
-		np->tmsg = atoi(mem);
-		free(mem);
+	word = strtok_r(NULL, "|", &mem);
+	if ( word != NULL ) {
+		strcpy(tmp, word);
+		np->tmsg = atoi(word);
 	}
 	
-	mem = pk_deencapsulator(str, MSG_FIELD);
-	if (mem) {
-		np->msg = mem;
+	word = strtok_r(NULL, "|", &mem);
+	if ( word != NULL ) {
+		np->msg = strdup(word);
 	}
 	
 	return np;
