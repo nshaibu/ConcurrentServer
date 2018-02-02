@@ -71,28 +71,35 @@ static int authenticator(struct thread_block *blk, const char *name, const char 
 
 
 static void authenticate_user(struct thread_block *blk, struct packet *pk) {
-	char passwd[PASSWD_BUF_SIZE];
-	char name[NAME_BUF_SIZE];
-	char str[MAX_DATA_SIZE];
-	char *saveptr, *word, *buff;
+	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_DATA_SIZE];
+	char *saveptr, *pword = NULL, *nword = NULL;
 			
 	strcpy(str, pk->msg);
-			
-	word = strtok_r(str, ":", &saveptr);
-	if ( word != NULL ) 
-		strcpy(name, word);
-				
-	word = strtok_r(NULL, ":", &saveptr);
-	if ( word != NULL )
-		strcpy(passwd, word);
-			
-	printf("%s::%s\n", name, passwd);
-	if (authenticator(blk, name, passwd) == 0) 
-		buff = "Success"; 
-	else 
-		buff = "Failed";
-	send_msg_dontwait(blk, buff);
 	destroy_packet(pk);
+
+	nword = strtok_r(str, ":", &saveptr);
+	pword = strtok_r(NULL, ":", &saveptr);
+	if ( nword != NULL && pword != NULL ) {
+		strcpy(name, nword);
+		strcpy(passwd, pword);
+
+		if ( authenticator(blk, name, passwd) == 0 ) {
+			sprintf(str, "|%d|-1|-1|-1|A|", ACK_PACKET);
+			send_msg_dontwait(blk, str);
+		} else {    //authentication failed
+			sprintf(str, "|%d|-1|-1|-1|A|", FIN_PACKET);
+			send_msg_dontwait(blk, str);
+
+			destroy_thread_node(blk);
+			pthread_exit(NULL);
+		}
+	} else {    //if any word is null exit
+		sprintf(str, "|%d|-1|-1|-1|A|", FIN_PACKET);  /*send fin packet and close*/
+
+		send_msg_dontwait(blk, str);											  /*connects*/
+		destroy_thread_node(blk);
+		pthread_exit(NULL);
+	}
 }
 
 #ifndef TRY_CON
