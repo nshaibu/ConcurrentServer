@@ -29,12 +29,13 @@
 #endif
 
 #ifndef MYSQL_QUERY_BUFF
-#define MYSQL_QUERY_BUFF 100
+#define MYSQL_QUERY_BUFF 500
 #endif
 
-#if !defined ( NAME_BUF_SIZE ) || ! defined ( PASSWD_BUF_SIZE )
-#define NAME_BUF_SIZE 50
-#define PASSWD_BUF_SIZE 70
+#if !defined ( NAME_BUF_SIZE ) || ! defined ( PASSWD_BUF_SIZE ) || ! defined ( MSG_BUFF_SIZE )
+#define NAME_BUF_SIZE 100
+#define PASSWD_BUF_SIZE 120
+#define MSG_BUFF_SIZE 1000
 #endif
 
 

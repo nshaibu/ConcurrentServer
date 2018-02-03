@@ -21,7 +21,7 @@
 
 
 #define TIME_BUZ 40
-#define BUFF_DEF_STR 100
+#define BUFF_DEF_STR 150
 
 
 #define GET_LOG_FILENAME(file) ({\

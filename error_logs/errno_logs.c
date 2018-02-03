@@ -98,7 +98,7 @@ void log_errors(
 		if (thread_id == NULL) 
 			exit(EXIT_FAILURE);
 		else
-			pthread_cancel( (pthread_t)*thread_id );
+			pthread_cancel( pthread_self() );
 	}
 }
 
