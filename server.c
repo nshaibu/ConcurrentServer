@@ -139,12 +139,16 @@ void make_server() {
 		memset(db_query, '\0', sizeof(db_query));
 		sprintf( db_query,
                "CREATE TABLE %s.messages ( \
-                msg_userid INTEGER NOT NULL, \
-                msg_type VARCHAR(6) NOT NULL, \
+                sender_id INTEGER NOT NULL, \
+                receiver_id INTEGER NOT NULL, \
+                time_sent DECIMAL(20, 0), \
+                time_received DECIMAL(20, 0), \
+                msg_type INTEGER NOT NULL, \
                 message VARCHAR(%d) NOT NULL \
                )",
                my_info.database_name, MAX_DATA_SIZE
-				 );
+				 );	/*time_sent and time_received is measured the unix epoch*/
+				 
 		if ( mysql_query(mysql_con, db_query) !=0 ) {
 			log_errors( NULL,
                   MYSQL_ERRORS, 

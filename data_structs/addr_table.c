@@ -41,7 +41,7 @@ void insertInAddrTable(unsigned id, void *addr) {
 void *getAddrFromaddrTable(unsigned id) {
 	int ret = binary_search(id);
 	
-	return ( ret > 0 )? addrs[ret].addr_ : NULL;
+	return ( ret >= 0 )? addrs[ret].addr_ : NULL;
 }
 
 void *removeFromAddrTable(unsigned id) {

@@ -14,7 +14,7 @@
 #include "./error_logs/errno_logs.h"
 
 #ifndef MYSQL_QUERY_BUFF
-#define MYSQL_QUERY_BUFF 100
+#define MYSQL_QUERY_BUFF 500
 #endif
 
 

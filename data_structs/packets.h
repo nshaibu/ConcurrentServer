@@ -28,20 +28,18 @@ typedef enum {
 #endif
 
 //Packet types 
-#define NEG_PACKET 10    /*negotiation and authentication packet*/
-#define GET_GEO_PACKET 20    /*get geolocation packet*/
-#define SET_GEO_PACKET 21    /*set geolocation packet*/
-#define MSG_PACKET 30    /*message packet for both text and media files*/
+#define REG_PACKET 9      /*User registration packet*/
+#define AUTH_PACKET 10    /*authentication packet*/
+
+#define GEO_PACKET 20        /*packet received is geolocation packet[send geolocation info to self or other client]*/
+#define GET_GEO_PACKET 21    /*get geolocation packet [request]*/
+#define SET_GEO_PACKET 22    /*set geolocation packet [request]*/
+
+#define MSG_PACKET 30   /*normal messages like plain text*/
+#define FILE_PACKET 31  /*send messages in a form of files like .docx,.txt,.mp3*/
 #define ACK_PACKET 40    /*acknowledge packet*/
 #define SYN_PACKET 41    /*synchronization packet*/
 #define FIN_PACKET 42    /*Finishing packet*/
-
-//field specifiers for deencapsulator
-#define PTYPE_FIELD 1 
-#define SENDER_ID_FIELD 2 
-#define RECEIVER_ID_FIELD 3
-#define MSGTYPE_FIELD 4
-#define MSG_FIELD 5
 
 
 struct packet {
@@ -52,11 +50,6 @@ struct packet {
 	msg_type tmsg;       /*what type of data is msg?*/
 	void *msg;           /*container for all messages*/
 };
-
-char *pk_deencapsulator(const char *str, int field_to_ret);    /*DeEncapsulates packets*/			
-
-//char **get_tokens(char *str, const char *sep, int *len );    /*Break string into tokens and return an array of char* */
-//void token_free(char **token_arr);   /*Release the resource of the array return from get_token call*/
 
 
 struct packet *create_packet();

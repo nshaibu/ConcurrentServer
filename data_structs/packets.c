@@ -35,67 +35,6 @@ static char *make_message(const char *fmt, ...) {
 }
 
 
-char *pk_deencapsulator(const char *str, int field_to_ret) {
-	if ( str == NULL )
-		return NULL;
-	int i=0, num_of_bar=0, j=0, mem_size=10;
-	
-	char *buff = (char*)malloc(mem_size);
-	if (!buff)
-		return NULL;
-	
-	while ( str[i] != '\0' ) {
-		if (str[i] == '|') {
-			++num_of_bar;
-			if (j > 0) break;
-		}
-		else if (str[i] != '|' && num_of_bar >= field_to_ret) {
-			buff[j++] = str[i];
-			
-			if (j == mem_size - 2) {
-				mem_size += 10;
-				char *tmp = (char*)realloc(buff, mem_size);
-				if (tmp == NULL) break;
-				else buff = tmp;
-			}
-		}
-			
-		i++;
-	}
-	buff[j]='\0';
-	
-	return buff;
-}
-
-/*char **get_tokens(char *str, const char *sep, int *len ) {*/
-/*	char *word, *tmp1;*/
-/*	char **arr = NULL;*/
-/*	int i=0;*/
-/*   */
-/*	arr = (char**)malloc(5*sizeof(char*));*/
-/*   */
-/*	word=strtok_r(str, sep, &tmp1);*/
-/*	while(word != NULL) {*/
-/*		arr[i++] = (char*)strdup(word);*/
-/*		word=strtok_r(NULL, sep, &tmp1);*/
-/*	}*/
-/*	arr[i] = NULL;*/
-/*	*/
-/*	if ( len != NULL) *len = i-1;*/
-/*	*/
-/*	return arr;*/
-/*}*/
-
-void token_free(char **token_arr) {
-	while (*token_arr) {
-		free(*token_arr);
-		token_arr++;
-	}
-	
-	free(token_arr);
-}
-
-
 struct packet *create_packet() 
 {
 	struct packet *np = (struct packet*)malloc(sizeof(struct packet));
