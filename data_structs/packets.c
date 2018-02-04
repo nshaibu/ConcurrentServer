@@ -35,7 +35,7 @@ static char *make_message(const char *fmt, ...) {
 }
 
 
-struct packet *create_packet() 
+struct packet *create_packet()
 {
 	struct packet *np = (struct packet*)malloc(sizeof(struct packet));
 	if (np == NULL)

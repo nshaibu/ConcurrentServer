@@ -30,6 +30,7 @@ typedef enum {
 //Packet types 
 #define REG_PACKET 9      /*User registration packet*/
 #define AUTH_PACKET 10    /*authentication packet*/
+#define GET_USERS_PACKET 11   /*ask the server for all  the users on the system and the userid*/
 
 #define GEO_PACKET 20        /*packet received is geolocation packet[send geolocation info to self or other client]*/
 #define GET_GEO_PACKET 21    /*get geolocation packet [request]*/
@@ -41,6 +42,11 @@ typedef enum {
 #define SYN_PACKET 41    /*synchronization packet*/
 #define FIN_PACKET 42    /*Finishing packet*/
 
+#ifdef _GNUC_
+#define MALLOC __attribute__(( malloc ))
+#else
+#define MALLOC 
+#endif
 
 struct packet {
 	unsigned ptype;      /*what packet is this packet?*/
@@ -52,7 +58,7 @@ struct packet {
 };
 
 
-struct packet *create_packet();
+struct packet *create_packet() MALLOC;
 
 void set_packet_type(struct packet *pk, unsigned type);
 
@@ -62,9 +68,9 @@ int set_packet_recv_id(struct packet *pk, int receiver);
 
 int set_packet_msg(struct packet *pk, void *msg);
 
-char *packet_to_string(struct packet *pk);
+char *packet_to_string(struct packet *pk) MALLOC;
 
-struct packet *string_to_packet(const char *str);
+struct packet *string_to_packet(const char *str) MALLOC;
 
 void destroy_packet(struct packet *pk);
 
