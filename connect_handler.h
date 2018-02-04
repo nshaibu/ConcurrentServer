@@ -13,6 +13,8 @@
 #include "./data_structs/packets.h"
 #include "./error_logs/errno_logs.h"
 
+#define THREAD_WAIT_TIME 0.51223   /*The time for the connect_handler thread to wait*/
+
 #ifndef MYSQL_QUERY_BUFF
 #define MYSQL_QUERY_BUFF 500
 #endif

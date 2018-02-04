@@ -285,9 +285,9 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 																                                     /*for my location */
 				node = getAddrFromaddrTable( pk->sender_id );     
 				
-				if ( node == NULL ) {
+				if ( node != NULL ) {
 					struct packet *pkt = create_packet();
-					
+					printf("Herr too %s \n", packet_to_string(pk));
 					set_packet_type(pkt, GEO_PACKET);
 					set_packet_send_id(pkt, pk->receiver_id);
 					set_packet_recv_id(pkt, pk->sender_id);
@@ -309,7 +309,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 				node = getAddrFromaddrTable(pk->receiver_id);
 				if ( node != NULL ) {     //if receiver is online receive geolocation info
 					pthread_mutex_lock( &(node->in_queue->queue_lock) );   //lock receiver msg
-			
+					printf("got here %s\n", packet_to_string(pk));
 					enqueue(node->in_queue, pk);     //append packet
 					pthread_mutex_unlock( &(node->in_queue->queue_lock) );  
 				} else 
@@ -330,6 +330,8 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 			destroy_packet(pk);
 		break;
 		case GEO_PACKET:
+			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
+			
 				sprintf( str,                           
 							"|%d|%d|%d|%d|%s|",      /*format of /30/3/1/10/125541:624561/*/
 							GEO_PACKET, 
@@ -385,6 +387,7 @@ void *connection_handler(void *data) {
 			if ( !empty( thread_node->in_queue ) ) {
 				pk = dequeue(thread_node->in_queue);
 				test_cond = 0;
+				printf("Here:[%s]\n", packet_to_string(pk));
 			}
 			
 		pthread_mutex_unlock( &(thread_node->in_queue->queue_lock) );
@@ -397,7 +400,7 @@ void *connection_handler(void *data) {
 			test_cond = -1;
 		
 		
-		sleep(0.52112);
+		sleep(THREAD_WAIT_TIME);
 	}
 	
 	mysql_thread_end();
