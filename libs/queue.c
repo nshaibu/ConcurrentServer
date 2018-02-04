@@ -38,8 +38,8 @@ void enqueue(Generic_queue *Q, struct packet *data) {
 }
 
 struct packet *dequeue(Generic_queue *Q) {
-	if ( empty(Q) ) 
-		return NULL;
+	//if ( empty(Q) ) 
+	//	return NULL;
 	
 	struct packet *hold = Q->head->data;
 	struct queue_node *temp = Q->head;

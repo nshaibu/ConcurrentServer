@@ -141,17 +141,17 @@ static void authenticate_user(struct thread_block *blk, struct packet *pk) {
 		int ret = authenticator(blk, name, passwd);
 		
 		if ( ret == 0 ) {
-			sprintf(str, "|%d|-1|-1|-1|A|", ACK_PACKET);
+			sprintf(str, "|%d|-1|-1|-1|ACK|", ACK_PACKET);
 			send_msg_dontwait(blk, str);
 		} else {    //authentication failed
-			sprintf(str, "|%d|-1|-1|-1|A|", FIN_PACKET);
+			sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);
 			send_msg_dontwait(blk, str);
 
 			destroy_thread_node(blk);
 			pthread_exit(NULL);
 		}
 	} else {    //if any word is null exit
-		sprintf(str, "|%d|-1|-1|-1|A|", FIN_PACKET);  /*send fin packet and close*/
+		sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);  /*send fin packet and close*/
 
 		send_msg_dontwait(blk, str);											  /*connects*/
 		destroy_thread_node(blk);
@@ -179,17 +179,17 @@ static void register_new_user(struct thread_block *blk, struct packet *pk) {
 		
 		int ret = registrator(blk, name, passwd);
 		if ( ret == 0 ) {
-			sprintf(str, "|%d|-1|-1|-1|A|", ACK_PACKET );
+			sprintf(str, "|%d|-1|-1|-1|ACK|", ACK_PACKET );
 			send_msg_dontwait(blk, str);
 		} else {    //authentication failed
-			sprintf(str, "|%d|-1|-1|-1|A|", FIN_PACKET);
+			sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);
 			send_msg_dontwait(blk, str);
 
 			destroy_thread_node(blk);
 			pthread_exit(NULL);
 		}
 	} else {    //if any word is null exit
-		sprintf(str, "|%d|-1|-1|-1|A|", FIN_PACKET);  /*send fin packet and close*/
+		sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);  /*send fin packet and close*/
 
 		send_msg_dontwait(blk, str);											  /*connects*/
 		destroy_thread_node(blk);
@@ -208,6 +208,7 @@ static void NOT_YET_AUTHENTICATED_EXIT(struct thread_block *block, struct packet
 static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 	char db_query[MYSQL_QUERY_BUFF], str[MAX_DATA_SIZE];
 	char *saveptr, *latti_word=NULL, *longi_word=NULL;  //tmp storage for strtok_r calls
+	
 	struct thread_block *node = NULL; //for addrTable
 	
 	
@@ -217,70 +218,104 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 		case MSG_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
-			node = getAddrFromaddrTable(pk->receiver_id);
-			if ( node != NULL ) {
-				//append packet to reciver msg queue
-				if ( pk->receiver_id == blk->userid) {  //if I am the receiver
-					sprintf( str,
-								"|%d|%d|%d|%d|%s",
-								MSG_PACKET,
-								pk->sender_id,
-								pk->receiver_id,
-								pk->tmsg,
-								(char*)pk->msg
-							);
+			if ( pk->receiver_id == blk->userid ) {  //if I am the receiver
+				sprintf( str,
+							"|%d|%d|%d|%d|%s|",          /*format of packet /30/3/1/0/DATA*/
+							MSG_PACKET,
+							pk->sender_id,
+							pk->receiver_id,
+							pk->tmsg,
+							(char*)pk->msg
+						);
 						
-					send_msg_dontwait(node, str);
-				}
-			} else {
-				//write to database for messages
-				sprintf( db_query,
-							"INSERT INTO %s.messages(sender_id, receiver_id, time_sent, time_received, msg_type, message) \
-							VALUES(%d, '%d', '%ld', '%ld', '%d', '%s' )",
-							my_info.database_name,    /*The database name*/ 
-							pk->sender_id,            /*The sender id*/
-							pk->receiver_id,          /*The receiver id*/
-							time(NULL),               /*[sent time]Number of seconds since unix epoch*/
-							(time_t)-1,               /*[receiver time]Number of seconds since unix epoch*/
-							pk->tmsg,                 /*The msg type*/ 
-							(char*)pk->msg            /*The msg*/
-						 );
+				send_msg_dontwait(blk, str);
+			
+			} else {   //i am not the receiver, i am the sender
+			
+				node = getAddrFromaddrTable(pk->receiver_id);
+				if ( node != NULL ) {   //if receiver is online
+					//append packet to reciver msg queue
+					pthread_mutex_lock( &(node->in_queue->queue_lock) );   //get queue_lock to append msg
+					enqueue(node->in_queue, pk);     //append msg
+					pthread_mutex_unlock( &(node->in_queue->queue_lock) );  
+				} else {
+					//write to database for messages
+					sprintf( db_query,
+								"INSERT INTO %s.messages(sender_id, receiver_id, time_sent, time_received, msg_type, message) \
+								VALUES(%d, '%d', '%ld', '%ld', '%d', '%s' )",
+								my_info.database_name,    /*The database name*/ 
+								pk->sender_id,            /*The sender id*/
+								pk->receiver_id,          /*The receiver id*/
+								time(NULL),               /*[sent time]Number of seconds since unix epoch*/
+								(time_t)-1,               /*[receiver time]Number of seconds since unix epoch*/
+								pk->tmsg,                 /*The msg type*/ 
+								(char*)pk->msg            /*The msg*/
+							);
 				
-				if ( mysql_query(blk->con, db_query) !=0 ) {
-					log_errors( &(blk->tid),
-                          MYSQL_ERRORS, 
-                          DO_EXIT, 
-                          NO_WRITE, 
-                          LOGS_FATAL_ERRORS, 
-                          MYSQL_QUERY_FAILED, 
-                          blk, 
-                          (void (*)(void*))destroy_thread_node );
+					if ( mysql_query(blk->con, db_query) !=0 ) {
+						log_errors( &(blk->tid),
+		                       MYSQL_ERRORS, 
+		                       DO_EXIT, 
+		                       NO_WRITE, 
+		                       LOGS_FATAL_ERRORS, 
+		                       MYSQL_QUERY_FAILED, 
+		                       blk, 
+		                       (void (*)(void*))destroy_thread_node );
+					}
 				}
 			}
 			
-			destroy_packet(pk);
+			//destroy_packet(pk);
 		break;
 		case GET_GEO_PACKET: 
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
-			if ( pk->receiver_id == pk->sender_id ) {
-				sprintf( str, 
-							"|%d|%d|%d|%d|%ld:%ld|", 
+			if ( pk->receiver_id == pk->sender_id ) {    /*if I am both the sender and the receiver, then*/ 
+				sprintf( str,                             /*I am asking for my location*/
+							"|%d|%d|%d|%d|%ld:%ld|",      /*format of /30/3/1/10/125541:624561/*/
 							GEO_PACKET, 
 							pk->sender_id, pk->receiver_id, 
 							COORD_DATA, blk->loc.longitude, blk->loc.lattitude);
 							
 				send_msg_dontwait(blk, str);
-			} else {  //get others geolocation
-				node = getAddrFromaddrTable(pk->receiver_id);
-				if ( node != NULL ) {     //if receiver is online receive geolocation info
-					pthread_mutex_lock( &(blk->in_queue->queue_lock) );   //lock receiver msg
+			}
+			
+			
+			if (blk->userid == pk->receiver_id && pk->sender_id != pk->receiver_id) {  /*if i am the receiver then some is asking */
+																                                     /*for my location */
+				node = getAddrFromaddrTable( pk->sender_id );     
 				
-					enqueue(blk->in_queue, pk);     //append packet
-					pthread_mutex_unlock( &(blk->in_queue->queue_lock) );  
+				if ( node == NULL ) {
+					struct packet *pkt = create_packet();
+					
+					set_packet_type(pkt, GEO_PACKET);
+					set_packet_send_id(pkt, pk->receiver_id);
+					set_packet_recv_id(pkt, pk->sender_id);
+					pkt->tmsg = COORD_DATA;
+					
+					sprintf(str, "%ld:%ld", blk->loc.longitude, blk->loc.lattitude);
+					
+					set_packet_msg(pkt, strdup(str));
+					
+					pthread_mutex_lock( &(node->in_queue->queue_lock) );
+					enqueue(node->in_queue, pkt);
+					pthread_mutex_unlock( &(node->in_queue->queue_lock) );
+					
+					destroy_packet(pk);
 				}
 			}
-			destroy_packet(pk);
+				
+			if (blk->userid == pk->sender_id && pk->sender_id != pk->receiver_id) {    /*if i am the sender, then I am asking for someone location*/
+				node = getAddrFromaddrTable(pk->receiver_id);
+				if ( node != NULL ) {     //if receiver is online receive geolocation info
+					pthread_mutex_lock( &(node->in_queue->queue_lock) );   //lock receiver msg
+			
+					enqueue(node->in_queue, pk);     //append packet
+					pthread_mutex_unlock( &(node->in_queue->queue_lock) );  
+				} else 
+					destroy_packet(pk);
+			}
+			
 		break;
 		case SET_GEO_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
@@ -294,11 +329,19 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 			
 			destroy_packet(pk);
 		break;
+		case GEO_PACKET:
+				sprintf( str,                           
+							"|%d|%d|%d|%d|%s|",      /*format of /30/3/1/10/125541:624561/*/
+							GEO_PACKET, 
+							pk->sender_id, pk->receiver_id, 
+							COORD_DATA, (char*)pk->msg);
+							
+				send_msg_dontwait(blk, str);
+		break;
 		
 	}
 }
 
-#ifndef TRY_CON
 
 void *connection_handler(void *data) {
 	struct thread_block *thread_node = (struct thread_block*)data;
@@ -338,20 +381,23 @@ void *connection_handler(void *data) {
 		}
 		
 		//check whether queue is empty but dont wait if you will block
-		if ( pthread_mutex_trylock( &(thread_node->in_queue->queue_lock) ) == 0 ) {
+		pthread_mutex_lock( &(thread_node->in_queue->queue_lock) );
 			if ( !empty( thread_node->in_queue ) ) {
 				pk = dequeue(thread_node->in_queue);
 				test_cond = 0;
 			}
-			pthread_mutex_unlock( &(thread_node->in_queue->queue_lock) );
 			
-			if (test_cond == 0) 
+		pthread_mutex_unlock( &(thread_node->in_queue->queue_lock) );
+			
+			if (test_cond == 0) {
 				interpret_packets(thread_node, pk);
-			else 
-				test_cond = -1;
-		}
+				destroy_packet(pk);    //destroy the packet now
+			}
+			
+			test_cond = -1;
 		
-		sleep(0.43);
+		
+		sleep(0.52112);
 	}
 	
 	mysql_thread_end();
@@ -359,57 +405,4 @@ void *connection_handler(void *data) {
 }
 
 
-#else
 
-
-void *connection_handler(void *data) {
-	struct thread_block *thread_node = (struct thread_block*)data;
-	int i = 0;
-	char buff[50];
-	
-/*	MYSQL_RES *res;*/
-/*	MYSQL_ROW srow;*/
-	
-	//sprintf(buff, "%s", "hello world");
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-	
-/*	  if (mysql_query(thread_node->con, "select userid, userpasswd from concurrent_chat.users") ){*/
-/*      printf("%s\n", mysql_error(thread_node->con));*/
-/*      pthread_exit(0);*/
-/*    }*/
-
-
-/*    res = mysql_use_result(thread_node->con);*/
-/*    if (res) {*/
-/*      while ( (srow = mysql_fetch_row(res)) ) {*/
-/*        sprintf(buff, "%s %s\n", srow[0], srow[1]);*/
-/*      }*/
-
-/*      mysql_free_result(res);*/
-/*    }*/
-	authenticator(thread_node, "nuhu", "556mnj");
-	sprintf(buff, "%d", get_addr_table_len());
-	while (1) {
-		//sprintf(buff, "client on server are %d", get_list_height());
-		send(thread_node->socket, buff, strlen(buff), MSG_DONTWAIT);
-		//recv(thread_node->socket, buff, 50,  MSG_DONTWAIT);
-		send(thread_node->socket, thread_node->username, strlen(thread_node->username), MSG_DONTWAIT);
-		sleep(4);
-		
-		//if (thread_node->user_auth == USER_TO_EXIT) break;
-		
-		if (i == 5) break;
-		++i;
-	}
-	//write(thread_node->socket, "Got here\n", 10);
-	shutdown(thread_node->socket, 2);
-	//close(thread_node->socket);
-	//pthread_cancel(pthread_self());
-	destroy_thread_node(thread_node);
-	mysql_thread_end();
-	return NULL;
-}
-
-
-#endif
