@@ -206,8 +206,11 @@ static void NOT_YET_AUTHENTICATED_EXIT(struct thread_block *block, struct packet
 }
 
 static void interpret_packets(struct thread_block *blk, struct packet *pk) {
-	char db_query[MYSQL_QUERY_BUFF], str[MAX_DATA_SIZE+1];
-	char *saveptr, *latti_word=NULL, *longi_word=NULL, *mem=NULL;  //tmp storage for strtok_r calls
+	char db_query[MYSQL_QUERY_BUFF+1], str[MAX_PACKET_SIZE+1];
+	char *saveptr, *latti_word=NULL, *longi_word=NULL;  //tmp storage for strtok_r calls
+	char *mem=NULL; //This is used when dynamic memory is required and it must be freed in the scope used
+	
+	ssize_t size_mem = 0;    //size of dynamic memory
 	//struct packet *pckt = NULL;   //dereferencing it twice causes segfault
 	struct thread_block *node = NULL; //for addrTable
 	
@@ -217,8 +220,10 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 	switch(pk->ptype) {
 		case REG_PACKET: register_new_user(blk, pk); break;
 		case AUTH_PACKET: authenticate_user(blk, pk); break;
-		case GET_USERS_PACKET:
-			sprintf( db_query, "SELECT userid, username FROM %s.users", my_info.database_name );
+		case GET_ALL_USERS_PACKET:
+			snprintf( db_query, MYSQL_QUERY_BUFF,
+						"SELECT userid, username FROM %s.users WHERE NOT userid = %d ", 
+						my_info.database_name, blk->userid );
 			
 			if ( mysql_query(blk->con, db_query) !=0 ) {
            log_errors( &(blk->tid),
@@ -245,23 +250,51 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
                         error_ignore );	
 			}
 			
-/*			mysql_row = mysql_fetch_row(mysql_res);*/
-/*			memset(str, '\0', MAX_DATA_SIZE+1);*/
-/*			*/
-/*			if ( mysql_row != NULL ) {*/
-/*				sprintf(str, "%s:%s", mysql_row[0], mysql_row[1]);*/
-/*				int size = 0*/
-/*				while( (mysql_row = mysql_fetch_row(mysql_res)) && size <= (MAX_DATA_SIZE - 4) ) {*/
-/*					*/
-/*				}*/
-/*			}*/
+			mysql_row = mysql_fetch_row(mysql_res);
+			memset(str, '\0', MAX_PACKET_SIZE);
+			mem = NULL;
+			int i=0, j=0;
+			mysql_row = mysql_fetch_row(mysql_res);
+					
+			while( (mysql_row = mysql_fetch_row(mysql_res)) ) {
+				memset(str, '\0', MAX_DATA_SIZE);
+				//sprintf(str, "%s:%s", mysql_row[0], mysql_row[1]);
+				strcpy(str, (char*)mysql_row[0]);
+				strcat(str, ":");
+				strcat(str, (char*)mysql_row[1]);
+				i = 0;    //reset i
+				
+				size_mem += (strlen(str)+1) * sizeof(char);
+				char *nmem = (char*)realloc(mem, size_mem);
+				if (nmem == NULL) break;
+				else
+					mem = nmem;
+				while (str[i] != '\0') {
+					mem[j++] = str[i];
+					i++;
+				}
+				mem[j++] = '\0';
+				mem[j++] = ' ';
+			}
+				
+			snprintf( str, MAX_PACKET_SIZE,
+					   "|%d|%d|%d|%d|%s|",
+					   USERS_PACKET,
+					   blk->userid,
+					   blk->userid,
+					   COORD_DATA_MANY,    /*many coordinates format [Data:Value Data1:Value1]*/
+					   (char*)mem
+					 );
+						 
+			free(mem);
+			send_msg_dontwait(blk, str);
 			
 		break;
 		case MSG_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
 			if ( pk->receiver_id == blk->userid ) {  //if I am the receiver
-				sprintf( str,
+				snprintf( str, MAX_PACKET_SIZE,
 							"|%d|%d|%d|%d|%s|",          /*format of packet /30/3/1/0/DATA*/
 							MSG_PACKET,
 							pk->sender_id,
@@ -273,8 +306,10 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 				send_msg_dontwait(blk, str);
 			
 			} else {   //i am not the receiver, i am the sender
-			
+				pthread_mutex_lock( &addrTable_mutex );
+				
 				node = getAddrFromaddrTable(pk->receiver_id);
+				pthread_mutex_unlock( &addrTable_mutex );
 				if ( node != NULL ) {   //if receiver is online
 					//append packet to reciver msg queue
 					pthread_mutex_lock( &(node->in_queue->queue_lock) );   //get queue_lock to append msg
@@ -282,7 +317,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 					pthread_mutex_unlock( &(node->in_queue->queue_lock) );  
 				} else {
 					//write to database for messages
-					sprintf( db_query,
+					snprintf( db_query, MYSQL_QUERY_BUFF,
 								"INSERT INTO %s.messages(sender_id, receiver_id, time_sent, time_received, msg_type, message) \
 								VALUES(%d, '%d', '%ld', '%ld', '%d', '%s' )",
 								my_info.database_name,    /*The database name*/ 
@@ -313,8 +348,8 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
 			if ( pk->receiver_id == pk->sender_id ) {    /*if I am both the sender and the receiver, then*/ 
-				sprintf( str,                             /*I am asking for my location*/
-							"|%d|%d|%d|%d|%ld:%ld|",      /*format of /30/3/1/10/125541:624561/*/
+				snprintf( str, MAX_PACKET_SIZE,           /*I am asking for my location*/
+							"|%d|%d|%d|%d|%ld:%ld|",         /*format of /30/3/1/10/125541:624561/*/
 							GEO_PACKET, 
 							pk->sender_id, pk->receiver_id, 
 							COORD_DATA, blk->loc.longitude, blk->loc.lattitude);
@@ -325,13 +360,15 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 			
 			if (blk->userid == pk->receiver_id && pk->sender_id != pk->receiver_id) {  /*if i am the receiver then some is asking */
 																                                     /*for my location */
+				pthread_mutex_lock( &addrTable_mutex );
+				
 				node = getAddrFromaddrTable( pk->sender_id );     
+				pthread_mutex_unlock( &addrTable_mutex ); 
 				
 				if ( node != NULL ) {
 					memset(str, '\0', MAX_DATA_SIZE+1);
 					
-/*					sprintf(str, "%ld:%ld", blk->loc.longitude, blk->loc.lattitude);*/
-					sprintf( str, 
+					snprintf( str, MAX_PACKET_SIZE,
 								"|%d|%d|%d|%d|%ld:%ld",
 								GEO_PACKET,
 								pk->receiver_id,
@@ -340,23 +377,11 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 								blk->loc.longitude, blk->loc.lattitude
 							 );
 					
-					struct packet *pckt = string_to_packet(str);
-/*					int rid = pk->sender_id;*/
-/*					int sid = pk->receiver_id;*/
-/*					free(pk->msg);*/
-/*					*/
-/*					//set new infos*/
-/*					pk->ptype = GEO_PACKET;*/
-/*					pk->sender_id = sid;*/
-/*					pk->receiver_id = rid;*/
-/*					pk->tmsg = COORD_DATA;*/
-/*					pk->msg = strdup(str);*/
-					
+					struct packet *pckt = string_to_packet(str);  //FIXME crashs on second reply
 					
 					if ( pckt != NULL ) {
 						
-						printf("Herr too %s \n", packet_to_string(pk));
-						//printf("Herr too %s \n", packet_to_string(pkt));  //dereferencing pkt twice causes segfault
+						server_debug("Enqueuing packet: |%d|%d|%d|%d|%s|", pckt->ptype, pckt->sender_id, pckt->receiver_id, pckt->tmsg, (char*)pckt->msg);
 						
 						pthread_mutex_lock( &(node->in_queue->queue_lock) );
 						enqueue(node->in_queue, pckt); 
@@ -399,13 +424,18 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 			}
 				
 			if (blk->userid == pk->sender_id && pk->sender_id != pk->receiver_id) {    /*if i am the sender, then I am asking for someone location*/
+				pthread_mutex_lock( &addrTable_mutex );
+				
 				node = getAddrFromaddrTable(pk->receiver_id);
-				printf("got here %s\n", packet_to_string(pk));
+				pthread_mutex_unlock( &addrTable_mutex );
+				
 				if ( node != NULL ) {     //if receiver is online receive geolocation info
 					pthread_mutex_lock( &(node->in_queue->queue_lock) );   //lock receiver msg
 					
 					enqueue(node->in_queue, pk);     //append packet
 					pthread_mutex_unlock( &(node->in_queue->queue_lock) );  
+					
+					server_debug("Enqueue packet: |%d|%d|%d|%d|%s|", pk->ptype, pk->sender_id, pk->receiver_id, pk->tmsg, (char*)pk->msg);
 				} else 
 					destroy_packet(pk);
 			}
@@ -426,7 +456,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 		case GEO_PACKET:     //read from the queue
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
-				sprintf( str,                           
+				snprintf( str, MAX_PACKET_SIZE,                           
 							"|%d|%d|%d|%d|%s|",      /*format of /30/3/1/10/125541:624561/*/
 							GEO_PACKET, 
 							pk->sender_id, pk->receiver_id, 
@@ -459,7 +489,8 @@ void *connection_handler(void *data) {
 		nread = recv(thread_node->socket, buff, MAX_PACKET_SIZE,  MSG_DONTWAIT); 
 		if (nread > 0) {
 			pk = string_to_packet(buff); //packetize string packet
-			printf("First here %s:%s\n", packet_to_string(pk), buff);
+			
+			server_debug("Read from socket:|%d|%d|%d|%d|%s|", pk->ptype, pk->sender_id, pk->receiver_id, pk->tmsg, (char*)pk->msg);
 			if ( pk == NULL ) {   
 					strcat(buff, "::packet dropped.");
 					
@@ -481,13 +512,14 @@ void *connection_handler(void *data) {
 			if ( !empty( thread_node->in_queue ) ) {
 				pk = dequeue(thread_node->in_queue);
 				test_cond = 0;
-				printf("Here:[%s]\n", packet_to_string(pk));
+				server_debug("Dequeued packet:|%d|%d|%d|%d|%s|", pk->ptype, pk->sender_id, pk->receiver_id, pk->tmsg, (char*)pk->msg);
 			}
 			
 		pthread_mutex_unlock( &(thread_node->in_queue->queue_lock) );
 			
 			if (test_cond == 0 && pk != NULL) {
 				interpret_packets(thread_node, pk);
+				server_debug("About to destroy packet:|%d|%d|%d|%d|%s|", pk->ptype, pk->sender_id, pk->receiver_id, pk->tmsg, (char*)pk->msg);
 				destroy_packet(pk);    //destroy the packet now
 			}
 			
@@ -497,11 +529,14 @@ void *connection_handler(void *data) {
 		sleep(THREAD_WAIT_TIME);
 	}
 	
+	pthread_mutex_lock( &addrTable_mutex );
+	
 	(void*)removeFromAddrTable(thread_node->userid);
+	pthread_mutex_unlock( &addrTable_mutex );
 	
 	destroy_thread_node(thread_node);
 	mysql_thread_end();
-	pthread_exit(0);
+	pthread_exit(NULL);
 }
 
 

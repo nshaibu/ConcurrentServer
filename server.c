@@ -105,6 +105,8 @@ void make_server() {
                   (void (*)(void*))mysql_close);
 	}
 	
+	server_debug("Checked whether %s exist.", my_info.database_name);
+	
 	//check result of the query executed
 	mysql_res = mysql_store_result(mysql_con);
 	int test = mysql_num_rows(mysql_res);
@@ -159,6 +161,8 @@ void make_server() {
                   mysql_con, 
                   (void (*)(void*))mysql_close);
 		}
+		
+		server_debug("Created database %s.", my_info.database_name);
 		
 		mysql_free_result(mysql_res);
 	}

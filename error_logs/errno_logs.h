@@ -24,6 +24,14 @@
 #define BUFF_DEF_STR 150
 
 
+#ifdef SERVER_DEBUG
+#define server_debug(format, msg...) ({ \
+    fprintf(stderr, "(debug) [FILE:%s][LINE:%d][FUNC:%s]" format "\n", __FILE__, __LINE__, __FUNCTION__, ##msg); \
+    })
+#else
+#define server_debug (void)0
+#endif
+
 #define GET_LOG_FILENAME(file) ({\
                                char *env_=getenv("HOME"); \
                                if (env_) \
