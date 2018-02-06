@@ -19,7 +19,8 @@ typedef enum {
 	JPG_PIC_DATA,     /*picture jpg*/
 	PNG_PIC_DATA,     /*picture png*/
 	
-	COORD_DATA        /*coordinate data [format data1:data2]*/
+	COORD_DATA,       /*coordinate data [format data1:data2]*/
+	COORD_DATA_MANY   /*many coordinates format [Data:Value Data1:Value1]*/
 } msg_type;
 
 #if !defined ( MAX_PACKET_SIZE ) || !defined ( MAX_DATA_SIZE )
@@ -30,7 +31,8 @@ typedef enum {
 //Packet types 
 #define REG_PACKET 9      /*User registration packet*/
 #define AUTH_PACKET 10    /*authentication packet*/
-#define GET_USERS_PACKET 11   /*ask the server for all  the users on the system and the userid*/
+#define USERS_PACKET 11   /*users packet*/
+#define GET_ALL_USERS_PACKET 12   /*ask the server for all  the users on the system and the userid*/
 
 #define GEO_PACKET 20        /*packet received is geolocation packet[send geolocation info to self or other client]*/
 #define GET_GEO_PACKET 21    /*get geolocation packet [request]*/
