@@ -1,6 +1,6 @@
 #include "connect_handler.h"
 
-static void send_msg_dontwait(struct thread_block *blk, const char *msg){
+static inline void send_msg_dontwait(struct thread_block *blk, const char *msg){
 	send(blk->socket, msg, strlen(msg), MSG_DONTWAIT);
 }
 
@@ -162,7 +162,7 @@ static void authenticate_user(struct thread_block *blk, struct packet *pk) {
 
 
 static void register_new_user(struct thread_block *blk, struct packet *pk) {
-	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_DATA_SIZE];
+	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_PACKET_SIZE];
 	char *saveptr, *pword = NULL, *nword = NULL;
 	
 	//May have email address
@@ -174,8 +174,8 @@ static void register_new_user(struct thread_block *blk, struct packet *pk) {
 	pword = strtok_r(NULL, ":", &saveptr);
 	
 	if ( nword != NULL && pword != NULL ) {
-		strcpy(name, nword);
-		strcpy(passwd, pword);
+		strncpy(name, nword, NAME_BUF_SIZE);
+		strncpy(passwd, pword, PASSWD_BUF_SIZE);
 		
 		int ret = registrator(blk, name, passwd);
 		if ( ret == 0 ) {
@@ -210,8 +210,6 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 	char *saveptr, *latti_word=NULL, *longi_word=NULL;  //tmp storage for strtok_r calls
 	char *mem=NULL; //This is used when dynamic memory is required and it must be freed in the scope used
 	
-	ssize_t size_mem = 0;    //size of dynamic memory
-	//struct packet *pckt = NULL;   //dereferencing it twice causes segfault
 	struct thread_block *node = NULL; //for addrTable
 	
 	MYSQL_RES *mysql_res = NULL;
@@ -220,9 +218,16 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 	switch(pk->ptype) {
 		case REG_PACKET: register_new_user(blk, pk); break;
 		case AUTH_PACKET: authenticate_user(blk, pk); break;
+		case CLOSE_PACKET:
+			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
+			
+			blk->user_auth = USER_TO_EXIT;
+			pthread_cancel( pthread_self() );
+			destroy_packet(pk);
+		break;
 		case GET_ALL_USERS_PACKET:
 			snprintf( db_query, MYSQL_QUERY_BUFF,
-						"SELECT userid, username FROM %s.users WHERE NOT userid = %d ", 
+						"SELECT userid, username FROM %s.users WHERE NOT userid = %d ORDER BY userid ", 
 						my_info.database_name, blk->userid );
 			
 			if ( mysql_query(blk->con, db_query) !=0 ) {
@@ -236,7 +241,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
                         error_ignore );
 			}
 			
-			mysql_res = mysql_use_result(blk->con);
+			mysql_res = mysql_store_result(blk->con);
 			if (mysql_res == NULL) {
 				mysql_free_result(mysql_res);
 		
@@ -250,44 +255,20 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
                         error_ignore );	
 			}
 			
-			mysql_row = mysql_fetch_row(mysql_res);
-			memset(str, '\0', MAX_PACKET_SIZE);
-			mem = NULL;
-			int i=0, j=0;
-			mysql_row = mysql_fetch_row(mysql_res);
-					
+			
 			while( (mysql_row = mysql_fetch_row(mysql_res)) ) {
-				memset(str, '\0', MAX_DATA_SIZE);
-				//sprintf(str, "%s:%s", mysql_row[0], mysql_row[1]);
-				strcpy(str, (char*)mysql_row[0]);
-				strcat(str, ":");
-				strcat(str, (char*)mysql_row[1]);
-				i = 0;    //reset i
+				memset(str, '\0', MAX_PACKET_SIZE);
 				
-				size_mem += (strlen(str)+1) * sizeof(char);
-				char *nmem = (char*)realloc(mem, size_mem);
-				if (nmem == NULL) break;
-				else
-					mem = nmem;
-				while (str[i] != '\0') {
-					mem[j++] = str[i];
-					i++;
-				}
-				mem[j++] = '\0';
-				mem[j++] = ' ';
+				snprintf(str, MAX_PACKET_SIZE,
+							"|%d|%d|%d|%d|%s:%s|",
+							USERS_PACKET,
+							blk->userid, blk->userid,
+							COORD_DATA, mysql_row[0], mysql_row[1]);
+				
+				server_debug("Sending user: %s", str);
+				send_msg_dontwait(blk, str);
 			}
-				
-			snprintf( str, MAX_PACKET_SIZE,
-					   "|%d|%d|%d|%d|%s|",
-					   USERS_PACKET,
-					   blk->userid,
-					   blk->userid,
-					   COORD_DATA_MANY,    /*many coordinates format [Data:Value Data1:Value1]*/
-					   (char*)mem
-					 );
-						 
-			free(mem);
-			send_msg_dontwait(blk, str);
+			
 			
 		break;
 		case MSG_PACKET:
@@ -342,7 +323,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 				}
 			}
 			
-			//destroy_packet(pk);
+			
 		break;
 		case GET_GEO_PACKET: 
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
@@ -366,7 +347,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 				pthread_mutex_unlock( &addrTable_mutex ); 
 				
 				if ( node != NULL ) {
-					memset(str, '\0', MAX_DATA_SIZE+1);
+					memset(str, '\0', MAX_PACKET_SIZE);
 					
 					snprintf( str, MAX_PACKET_SIZE,
 								"|%d|%d|%d|%d|%ld:%ld",
@@ -377,7 +358,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 								blk->loc.longitude, blk->loc.lattitude
 							 );
 					
-					struct packet *pckt = string_to_packet(str);  //FIXME crashs on second reply
+					struct packet *pckt = string_to_packet(str);  
 					
 					if ( pckt != NULL ) {
 						
@@ -403,7 +384,6 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 									);
 					} 
 					
-					destroy_packet(pk);
 				} else {
 					/*Receiver not online*/
 					mem = packet_to_string(pk);
@@ -469,18 +449,35 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 }
 
 
+static void destroy_handlers_block(void *arg) {
+	struct thread_block *node = (struct thread_block*)arg;
+	
+	if ( node != NULL ) {
+		pthread_mutex_lock( &addrTable_mutex );
+	
+		(void*)removeFromAddrTable(node->userid);
+		pthread_mutex_unlock( &addrTable_mutex );
+	
+		destroy_thread_node(node);
+	}
+}
+
+
 void *connection_handler(void *data) {
 	struct thread_block *thread_node = (struct thread_block*)data;
 	struct packet *pk = NULL;
 	ssize_t nread = 0;
-	char buff[MAX_PACKET_SIZE+1];
+	char buff[MAX_PACKET_SIZE+5];
 	int test_cond = -1;   /*check for whether pk is set for [while queue not empty]*/
-	memset(buff, '\0', MAX_PACKET_SIZE+1);   //init buff
+	
+	memset(buff, '\0', MAX_PACKET_SIZE+5);   //init buff
 	
 	/*For unmanageble thread cancelling. So the thread_info_block
 	* must be search and destroy it manually*/
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+	
+	pthread_cleanup_push(destroy_handlers_block, thread_node);   //clean up function
 	
 	while (1) {
 		if ( thread_node->user_auth == USER_TO_EXIT ) break;
@@ -505,6 +502,7 @@ void *connection_handler(void *data) {
 			}
 			
 			interpret_packets(thread_node, pk);
+			//destroy_packet(pk);
 		}
 		
 		//check whether queue is empty but dont wait if you will block
@@ -525,16 +523,13 @@ void *connection_handler(void *data) {
 			
 			test_cond = -1;
 		
-		memset(buff, '\0', MAX_PACKET_SIZE+1);   //init buff
+		pthread_testcancel();   /*cancellation point*/
+		
+		memset(buff, '\0', MAX_PACKET_SIZE+5);   //init buff
 		sleep(THREAD_WAIT_TIME);
 	}
 	
-	pthread_mutex_lock( &addrTable_mutex );
-	
-	(void*)removeFromAddrTable(thread_node->userid);
-	pthread_mutex_unlock( &addrTable_mutex );
-	
-	destroy_thread_node(thread_node);
+	pthread_cleanup_pop(1);
 	mysql_thread_end();
 	pthread_exit(NULL);
 }

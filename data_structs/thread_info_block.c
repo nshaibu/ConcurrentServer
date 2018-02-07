@@ -73,11 +73,9 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
 }
 
 void destroy_thread_node(struct thread_block *node) {
-	//pthread_cancel(node->tid);   because it causes the app to crash
 	close(node->socket);
 	mysql_close(node->con);
 	
-	//destroy_queue(node->out_queue);
 	destroy_queue(node->in_queue);
 	
 	free(node);

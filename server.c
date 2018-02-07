@@ -279,6 +279,7 @@ void make_server() {
 	pthread_attr_destroy(&pattr);
 	
 	mysql_close(mysql_con);
+	destroy_logs_object();
 	close(net_info.socket);
 }
 

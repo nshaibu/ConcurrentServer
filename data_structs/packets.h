@@ -40,9 +40,11 @@ typedef enum {
 
 #define MSG_PACKET 30   /*normal messages like plain text*/
 #define FILE_PACKET 31  /*send messages in a form of files like .docx,.txt,.mp3*/
+
 #define ACK_PACKET 40    /*acknowledge packet*/
 #define SYN_PACKET 41    /*synchronization packet*/
 #define FIN_PACKET 42    /*Finishing packet*/
+#define CLOSE_PACKET 43  /*request close connection packet*/
 
 #ifdef _GNUC_
 #define MALLOC __attribute__(( malloc ))

@@ -95,7 +95,7 @@ char *packet_to_string(struct packet *pk) {
 
 struct packet *string_to_packet(const char *str) {
 	char *mem, *word;
-	char tmp[10];
+	char tmp[11];
 	char *str_use = strdup(str);
 	
 	struct packet *np = (struct packet *)malloc(sizeof(struct packet));
@@ -104,39 +104,42 @@ struct packet *string_to_packet(const char *str) {
 	
 	word = strtok_r(str_use, "|", &mem);
 	if ( word != NULL) {
-		strcpy(tmp, word);
+		strncpy(tmp, word, 10);
 		np->ptype = atoi(word);
 	}
 	
 	word = strtok_r(NULL, "|", &mem);
 	if ( word != NULL ) {
-		strcpy(tmp, word);
+		strncpy(tmp, word, 10);
 		np->sender_id = atoi(word);
 	}
 	
 	word = strtok_r(NULL, "|", &mem);
 	if ( word != NULL ) {
-		strcpy(tmp, word);
+		strncpy(tmp, word, 10);
 		np->receiver_id = atoi(word);
 	}
 	
 	word = strtok_r(NULL, "|", &mem);
 	if ( word != NULL ) {
-		strcpy(tmp, word);
+		strncpy(tmp, word, 10);
 		np->tmsg = atoi(word);
 	}
 	
 	word = strtok_r(NULL, "|", &mem);
 	if ( word != NULL ) {
-		np->msg = strdup(word);
+		np->msg = strndup(word, MAX_DATA_SIZE);
 	}
 	
 	return np;
 }
 
 void destroy_packet(struct packet *pk) {
-	free(pk->msg);
+	void *hold = pk->msg;
+	free(hold);
+	pk->msg = NULL;
 	free(pk);
+	pk=NULL;
 }
 
 
