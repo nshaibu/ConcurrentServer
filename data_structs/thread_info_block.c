@@ -99,19 +99,12 @@ const struct geoloc *get_geolocation(struct thread_block *node) {
 	return ( node == NULL ) ? NULL : &(node->loc); 
 }
 
-/*void set_outQueue(struct thread_block *blk, Generic_queue *Q) { */
-/*	if ( blk && Q ) */
-/*		blk->out_queue = Q;  */
-/*}*/
 
 void set_inQueue(struct thread_block *blk, Generic_queue *Q) { 
 	if ( blk && Q ) 
 		blk->in_queue = Q; 
 }
 
-/*Generic_queue *get_outQueue(struct thread_block *blk) { */
-/*	return blk->out_queue; */
-/*}*/
 
 Generic_queue *get_inQueue(struct thread_block *blk) { 
 	return blk->in_queue; 

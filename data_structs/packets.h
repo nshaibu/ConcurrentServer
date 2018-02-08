@@ -40,6 +40,7 @@ typedef enum {
 
 #define MSG_PACKET 30   /*normal messages like plain text*/
 #define FILE_PACKET 31  /*send messages in a form of files like .docx,.txt,.mp3*/
+#define GET_MSG_PACKET 32  /*get messages in database*/
 
 #define ACK_PACKET 40    /*acknowledge packet*/
 #define SYN_PACKET 41    /*synchronization packet*/

@@ -125,7 +125,7 @@ static int authenticator(struct thread_block *blk, const char name[], const char
 
 
 static void authenticate_user(struct thread_block *blk, struct packet *pk) {
-	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_DATA_SIZE];
+	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_PACKET_SIZE];
 	char *saveptr, *pword = NULL, *nword = NULL;
 	
 	strcpy(str, pk->msg);
@@ -146,16 +146,18 @@ static void authenticate_user(struct thread_block *blk, struct packet *pk) {
 		} else {    //authentication failed
 			sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);
 			send_msg_dontwait(blk, str);
-
-			destroy_thread_node(blk);
-			pthread_exit(NULL);
+			
+			//destroy_thread_node(blk);
+			blk->user_auth = USER_TO_EXIT;
+			pthread_cancel( pthread_self() );
 		}
 	} else {    //if any word is null exit
 		sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);  /*send fin packet and close*/
 
 		send_msg_dontwait(blk, str);											  /*connects*/
-		destroy_thread_node(blk);
-		pthread_exit(NULL);
+		//destroy_thread_node(blk);
+		blk->user_auth = USER_TO_EXIT;
+		pthread_cancel( pthread_self() );
 	}
 }
 
@@ -221,11 +223,16 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 		case CLOSE_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
-			blk->user_auth = USER_TO_EXIT;
-			pthread_cancel( pthread_self() );
+			if ( blk->userid == pk->sender_id ) {
+				blk->user_auth = USER_TO_EXIT;
+				pthread_cancel( pthread_self() );
+			}
+			
 			destroy_packet(pk);
 		break;
 		case GET_ALL_USERS_PACKET:
+			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
+			
 			snprintf( db_query, MYSQL_QUERY_BUFF,
 						"SELECT userid, username FROM %s.users WHERE NOT userid = %d ORDER BY userid ", 
 						my_info.database_name, blk->userid );
@@ -313,17 +320,84 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 					if ( mysql_query(blk->con, db_query) !=0 ) {
 						log_errors( &(blk->tid),
 		                       MYSQL_ERRORS, 
-		                       DO_EXIT, 
+		                       DONT_EXIT, 
 		                       NO_WRITE, 
 		                       LOGS_FATAL_ERRORS, 
 		                       MYSQL_QUERY_FAILED, 
-		                       blk, 
-		                       (void (*)(void*))destroy_thread_node );
+		                       NULL, 
+		                       error_ignore );
 					}
 				}
 			}
 			
 			
+		break;
+		case GET_MSG_PACKET: 
+			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
+			
+			if ( blk->userid == pk->sender_id ) {
+				sprintf(db_query,
+							"SELECT sender_id, receiver_id, msg_type, message FROM %s.messages WHERE \
+							receiver_id = %d AND time_received = '-1' ORDER BY time_sent ASC",
+							my_info.database_name, blk->userid );
+							
+				if ( mysql_query(blk->con, db_query) != 0 ) {
+						log_errors( &(blk->tid),
+		                       MYSQL_ERRORS, 
+		                       DONT_EXIT, 
+		                       NO_WRITE, 
+		                       LOGS_FATAL_ERRORS, 
+		                       MYSQL_QUERY_FAILED, 
+		                       NULL, 
+		                       error_ignore );
+				}
+				
+				mysql_res = mysql_store_result(blk->con);
+				if (mysql_res == NULL) {
+					mysql_free_result(mysql_res);
+		
+					log_errors( &(blk->tid),
+                        MYSQL_ERRORS, 
+                        DONT_EXIT, 
+                        NO_WRITE, 
+                        LOGS_FATAL_ERRORS, 
+                        MYSQL_RESULT_CANT_READ, 
+                        NULL, 
+                        error_ignore );	
+				}
+				
+				while ( (mysql_row = mysql_fetch_row(mysql_res)) ) {
+					memset(str, '\0', MAX_PACKET_SIZE);
+					
+					snprintf( str, MAX_PACKET_SIZE,
+								 "|%d|%s|%s|%s|%s|",
+								 MSG_PACKET, 
+								 mysql_row[0], mysql_row[1], mysql_row[2], mysql_row[3] );
+					
+					send_msg_dontwait(blk, str);
+				}
+				
+				mysql_free_result(mysql_res);
+				memset(db_query, '\0', MYSQL_QUERY_BUFF);
+				
+				sprintf( db_query,
+							"UPDATE %s.messages SET time_received = '%ld' WHERE receiver_id = %d AND time_received = '-1'",
+							my_info.database_name, blk->curr_time() , blk->userid);
+							
+				if ( mysql_query(blk->con, db_query) != 0 ) {
+						log_errors( &(blk->tid),
+		                       MYSQL_ERRORS, 
+		                       DONT_EXIT, 
+		                       NO_WRITE, 
+		                       LOGS_FATAL_ERRORS, 
+		                       MYSQL_QUERY_FAILED, 
+		                       NULL, 
+		                       error_ignore );
+				}
+				
+			}
+			
+			destroy_packet(pk);
 		break;
 		case GET_GEO_PACKET: 
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
@@ -467,10 +541,11 @@ void *connection_handler(void *data) {
 	struct thread_block *thread_node = (struct thread_block*)data;
 	struct packet *pk = NULL;
 	ssize_t nread = 0;
+	
 	char buff[MAX_PACKET_SIZE+5];
 	int test_cond = -1;   /*check for whether pk is set for [while queue not empty]*/
 	
-	memset(buff, '\0', MAX_PACKET_SIZE+5);   //init buff
+	memset(buff, '\0', MAX_PACKET_SIZE);   //init buff
 	
 	/*For unmanageble thread cancelling. So the thread_info_block
 	* must be search and destroy it manually*/
@@ -502,7 +577,6 @@ void *connection_handler(void *data) {
 			}
 			
 			interpret_packets(thread_node, pk);
-			//destroy_packet(pk);
 		}
 		
 		//check whether queue is empty but dont wait if you will block
@@ -526,7 +600,7 @@ void *connection_handler(void *data) {
 		pthread_testcancel();   /*cancellation point*/
 		
 		memset(buff, '\0', MAX_PACKET_SIZE+5);   //init buff
-		sleep(THREAD_WAIT_TIME);
+		sleep(THREAD_WAIT_TIME);   /*cancellation point*/
 	}
 	
 	pthread_cleanup_pop(1);
