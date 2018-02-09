@@ -599,7 +599,7 @@ void *connection_handler(void *data) {
 		
 		pthread_testcancel();   /*cancellation point*/
 		
-		memset(buff, '\0', MAX_PACKET_SIZE+5);   //init buff
+		memset(buff, '\0', MAX_PACKET_SIZE);   //init buff
 		sleep(THREAD_WAIT_TIME);   /*cancellation point*/
 	}
 	
