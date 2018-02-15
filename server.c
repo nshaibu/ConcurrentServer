@@ -31,11 +31,6 @@ void set_mysql_data(const char *serv, const char *user, const char *pwd, const c
 	strcpy(my_info.database_name, dbname);
 }
 
-/*get mysql server connection info from any file*/
-/*const struct mysql_info *get_mysql_info_struct() {*/
-/*	return &my_info;*/
-/*}*/
-
 
 static void sig_handler(int sig) {
 	kill_server = 23;
@@ -125,8 +120,8 @@ void make_server() {
                 username VARCHAR(%d) NOT NULL, \
                 userpasswd VARCHAR(%d) NOT NULL \
                )",
-               my_info.database_name, NAME_BUF_SIZE, PASSWD_BUF_SIZE
-             );
+               my_info.database_name, NAME_BUF_SIZE, PASSWD_BUF_SIZE );
+			   
 		if ( mysql_query(mysql_con, db_query) !=0) {
 			log_errors( NULL,
                   MYSQL_ERRORS, 
@@ -148,8 +143,7 @@ void make_server() {
                 msg_type INTEGER NOT NULL, \
                 message VARCHAR(%d) NOT NULL \
                )",
-               my_info.database_name, MAX_DATA_SIZE
-				 );	/*time_sent and time_received is measured the unix epoch*/
+               my_info.database_name, MAX_DATA_SIZE );	/*time_sent and time_received is measured the unix epoch*/
 				 
 		if ( mysql_query(mysql_con, db_query) !=0 ) {
 			log_errors( NULL,
