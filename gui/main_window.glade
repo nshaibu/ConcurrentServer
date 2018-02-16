@@ -9,16 +9,6 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkEntryCompletion" id="entrycompletion1"/>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-missing-image</property>
-  </object>
-  <object class="GtkImage" id="image2">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-missing-image</property>
-  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Chat Server</property>
@@ -85,6 +75,7 @@
               <object class="GtkToolButton" id="start_ToolButton">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Start and stop the server</property>
                 <property name="label" translatable="yes">Start</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-home</property>
@@ -99,6 +90,7 @@
               <object class="GtkToolButton" id="Network_ToolButton">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Give the server port and ip address</property>
                 <property name="label" translatable="yes">Network</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-network</property>
@@ -113,6 +105,7 @@
               <object class="GtkToolButton" id="Database_ToolButton">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">configure MySQL database server for the server</property>
                 <property name="label" translatable="yes">Database</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-harddisk</property>
@@ -137,22 +130,75 @@
             <property name="border_width">5</property>
             <property name="homogeneous">True</property>
             <child>
-              <object class="GtkViewport">
+              <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">6</property>
-                <property name="margin_right">6</property>
-                <property name="margin_top">6</property>
-                <property name="margin_bottom">6</property>
+                <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkImage">
+                  <object class="GtkBox">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="stock">gtk-connect</property>
-                    <property name="icon_size">3</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="margin_left">12</property>
+                        <property name="margin_top">5</property>
+                        <property name="margin_bottom">5</property>
+                        <property name="label" translatable="yes">Server Status:</property>
+                        <attributes>
+                          <attribute name="weight" value="medium"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="main_window_switch">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="margin_top">5</property>
+                        <property name="margin_bottom">5</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <signal name="state-set" handler="switch_run" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
                   </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkViewport">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="shadow_type">none</property>
+                    <child>
+                      <object class="GtkImage">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="pixbuf">../icons/network-server.png</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
                 </child>
               </object>
               <packing>
@@ -462,7 +508,7 @@
                 <property name="label" translatable="yes">Debugging and Log Messages</property>
                 <attributes>
                   <attribute name="style" value="oblique"/>
-                  <attribute name="weight" value="semibold"/>
+                  <attribute name="weight" value="medium"/>
                 </attributes>
               </object>
             </child>
@@ -525,6 +571,7 @@
           <object class="GtkLabel" id="ip_addr_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_right">5</property>
             <property name="label" translatable="yes">IP Address</property>
           </object>
           <packing>
@@ -536,6 +583,7 @@
           <object class="GtkLabel" id="port_num_label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_right">8</property>
             <property name="label" translatable="yes">Port Number</property>
           </object>
           <packing>

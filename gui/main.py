@@ -105,7 +105,7 @@ class MainWindow():
         context.add_class(Gtk.STYLE_CLASS_PRIMARY_TOOLBAR)
 
         #tool buttons
-        self.start_ToolButton = self.builder.get_object("start_ToolButton")
+        self.start_ToolButton = self.builder.get_object("start_ToolButton")        
         self.Network_ToolButton = self.builder.get_object("Network_ToolButton")
         self.Database_ToolButton = self.builder.get_object("Database_ToolButton")
 
@@ -146,30 +146,36 @@ class StartToolButton:
         self.builder = builder 
 
         self.startbutton = self.builder.get_object("start_ToolButton")
-        self.test_serveron = False
+        self.start_switch = self.builder.get_object("main_window_switch")
+        
+        self.start_switch.set_tooltip_text("Server is OFF")
+
+        self.test_serveron = False     #boolean for whether server is on or off
 
         self.backprocess = None
         self.CMD = list()
 
         self.error_dialog = self.builder.get_object("ip_addrwrong_dialog")
-        #self.error_dialog.connect("close", self.on_ip_addrwrong_dialog_close)
+                
     
     def run(self, widget):
         if self.test_serveron:    #server is on
             if self.backprocess is not None:
                 self.backprocess.send_signal(signal.SIGINT)
-            
+                
+                self.start_switch.set_active(False)
+                self.start_switch.set_tooltip_text("Server is OFF")
+
             self.test_serveron = False
         else:                #server is off
             if server_info.network_config == False:
                 #self.error_dialog.set_primary_text("Network not configured")
-                self.error_dialog.format_secondary_text("Give the server port and ip address to listen on")
+                #self.error_dialog.format_secondary_text("Give the server port and ip address to listen on")
 
                 response = self.error_dialog.run()
                 if response == Gtk.ResponseType.OK:
                     self.error_dialog.destroy()
 
-                self.test_serveron = True
                 return
             if server_info.database_config == False:
                 #self.error_dialog.set_primary_text("Database not configured")
@@ -179,7 +185,6 @@ class StartToolButton:
                 if response == Gtk.ResponseType.OK:
                     self.error_dialog.destroy()
 
-                self.test_serveron = True
                 return
             
             self.CMD.clear()
@@ -194,7 +199,16 @@ class StartToolButton:
             try:
                 self.backprocess = sp.Popen(args=self.CMD, universal_newlines=True, stdout=sp.PIPE, stderr=sp.PIPE)
             except OSError:
+                self.error_dialog.format_secondary_text("[Error]Server cannot start. Check the logs for the reason")
+
+                response = self.error_dialog.run()
+                if response == Gtk.ResponseType.OK:
+                    self.error_dialog.destroy()
+
                 return
+            
+            self.start_switch.set_active(True)
+            self.start_switch.set_tooltip_text("Server is ON")
 
             self.test_serveron = True
 

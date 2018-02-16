@@ -221,7 +221,7 @@ static void register_new_user(struct thread_block *blk, struct packet *pk) {
 
 static void NOT_YET_AUTHENTICATED_EXIT(struct thread_block *block, struct packet *pk) {
 	if ( block->user_auth == USER_NOT_AUTH ) {
-		destroy_thread_node(block); 
+		//destroy_thread_node(block); 
 		destroy_packet(pk); 
 		pthread_cancel(pthread_self()); 
 	} 
