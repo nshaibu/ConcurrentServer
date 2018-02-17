@@ -96,10 +96,14 @@ class uptime:
             self.hours = self.hours + 1
             self.mins = 0
 
-        time_format = '%d:%d:%d' % (self.hours, self.mins, self.seconds)
+        time_format = '%d:%02d:%02d' % (self.hours, self.mins, self.seconds)
         self.label_widget.set_label(time_format)
 
         return True
+
+    def reset_timer(self):
+        self.hours = self.mins = 0 
+        self.seconds = -1
 
 server_info = server_data()     #global server info
 
@@ -195,7 +199,8 @@ class StartToolButton:
                 
                 GObject.source_remove(self.timer.timout_id)  #stop uptime timer
                 self.uptime_label.set_label("00:00:00")     #reset timer
-
+                self.timer.reset_timer()
+                
                 self.start_switch.set_active(False)
                 self.start_switch.set_tooltip_text("Server is OFF")
 
