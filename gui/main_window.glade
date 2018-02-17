@@ -248,7 +248,6 @@
                             <property name="can_focus">False</property>
                             <property name="margin_left">4</property>
                             <property name="margin_right">4</property>
-                            <property name="margin_top">3</property>
                             <property name="margin_bottom">3</property>
                             <property name="label" translatable="yes">Server version:</property>
                             <property name="single_line_mode">True</property>
@@ -263,7 +262,6 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_right">27</property>
-                            <property name="margin_top">3</property>
                             <property name="margin_bottom">3</property>
                             <property name="label" translatable="yes">Protocol:</property>
                           </object>
@@ -277,7 +275,6 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_right">53</property>
-                            <property name="margin_top">3</property>
                             <property name="margin_bottom">3</property>
                             <property name="label" translatable="yes">Port:</property>
                           </object>
@@ -371,7 +368,6 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_right">42</property>
-                            <property name="margin_top">3</property>
                             <property name="margin_bottom">3</property>
                             <property name="hexpand">False</property>
                             <property name="label" translatable="yes">Status:</property>
@@ -406,7 +402,6 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="margin_right">12</property>
-                            <property name="margin_top">3</property>
                             <property name="margin_bottom">3</property>
                             <property name="label" translatable="yes">Capabilities:</property>
                           </object>
@@ -433,6 +428,33 @@
                           <packing>
                             <property name="left_attach">1</property>
                             <property name="top_attach">5</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="margin_right">42</property>
+                            <property name="margin_bottom">3</property>
+                            <property name="label" translatable="yes">Uptime:</property>
+                          </object>
+                          <packing>
+                            <property name="left_attach">0</property>
+                            <property name="top_attach">6</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="uptime_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">00:00:00</property>
+                            <attributes>
+                              <attribute name="foreground" value="#4949a8a83535"/>
+                            </attributes>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="top_attach">6</property>
                           </packing>
                         </child>
                       </object>

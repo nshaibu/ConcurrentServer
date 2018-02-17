@@ -24,7 +24,7 @@ import sys
 import signal
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk 
+from gi.repository import Gtk, GObject 
 
 try:
     import ipaddress as ip_object
@@ -76,6 +76,31 @@ class server_data():
         self.server_port_num = str(port) 
 
 
+class uptime:
+    def __init__(self, widget):
+        self.hours = 0
+        self.mins = 0
+        self.seconds = -1
+
+        self.timout_id = None   #for the timeout_add callback function and to be able to stop the timer
+
+        self.label_widget = widget
+
+    def run(self, user_data):          #callback function to be run every second
+        self.seconds = self.seconds + 1
+
+        if self.seconds == 60:
+            self.mins = self.mins + 1
+            self.seconds = 0
+        elif self.mins == 60:
+            self.hours = self.hours + 1
+            self.mins = 0
+
+        time_format = '%d:%d:%d' % (self.hours, self.mins, self.seconds)
+        self.label_widget.set_label(time_format)
+
+        return True
+
 server_info = server_data()     #global server info
 
 
@@ -118,6 +143,9 @@ class MainWindow():
         Gtk.main()
 
     def on_delete(self, builder, widget):
+        if self.startbutton_act.backprocess is not None:
+            self.startbutton_act.backprocess.send_signal(signal.SIGINT)
+            
         Gtk.main_quit()
 
 class About_MenuItem():
@@ -147,13 +175,15 @@ class StartToolButton:
 
         self.startbutton = self.builder.get_object("start_ToolButton")
         self.start_switch = self.builder.get_object("main_window_switch")
+        self.uptime_label = self.builder.get_object("uptime_label")
         
         self.start_switch.set_tooltip_text("Server is OFF")
 
         self.test_serveron = False     #boolean for whether server is on or off
 
-        self.backprocess = None
-        self.CMD = list()
+        self.backprocess = None    ##background process object
+        self.timer = uptime(self.uptime_label)  ##timer object
+        self.CMD = list()   ##background command list
 
         self.error_dialog = self.builder.get_object("ip_addrwrong_dialog")
                 
@@ -163,6 +193,9 @@ class StartToolButton:
             if self.backprocess is not None:
                 self.backprocess.send_signal(signal.SIGINT)
                 
+                GObject.source_remove(self.timer.timout_id)  #stop uptime timer
+                self.uptime_label.set_label("00:00:00")     #reset timer
+
                 self.start_switch.set_active(False)
                 self.start_switch.set_tooltip_text("Server is OFF")
 
@@ -207,6 +240,7 @@ class StartToolButton:
 
                 return
             
+            self.timer.timout_id = GObject.timeout_add(1000, self.timer.run, None)   ##set up uptime timer
             self.start_switch.set_active(True)
             self.start_switch.set_tooltip_text("Server is ON")
 
