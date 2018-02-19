@@ -9,9 +9,12 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkEntryCompletion" id="entrycompletion1"/>
+  <object class="GtkTextBuffer" id="textbuffer1">
+    <property name="text" translatable="yes">Logs here</property>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Chat Server</property>
+    <property name="title" translatable="yes">Concurrent Chat Server</property>
     <property name="window_position">center</property>
     <property name="default_width">460</property>
     <property name="default_height">360</property>
@@ -163,7 +166,6 @@
                         <property name="margin_top">5</property>
                         <property name="margin_bottom">5</property>
                         <property name="hexpand">True</property>
-                        <property name="vexpand">True</property>
                         <signal name="state-set" handler="switch_run" swapped="no"/>
                       </object>
                       <packing>
@@ -505,6 +507,7 @@
                 <property name="left_padding">12</property>
                 <child>
                   <object class="GtkScrolledWindow">
+                    <property name="height_request">100</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="hexpand">True</property>
@@ -517,6 +520,9 @@
                         <property name="hexpand">True</property>
                         <property name="vexpand">True</property>
                         <property name="editable">False</property>
+                        <property name="cursor_visible">False</property>
+                        <property name="buffer">textbuffer1</property>
+                        <property name="overwrite">True</property>
                       </object>
                     </child>
                   </object>
@@ -718,13 +724,13 @@
   <object class="GtkMessageDialog" id="ip_addrwrong_dialog">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Error</property>
+    <property name="modal">True</property>
     <property name="type_hint">dialog</property>
     <property name="transient_for">main_window</property>
     <property name="attached_to">Network_popover</property>
     <property name="message_type">error</property>
     <property name="buttons">ok</property>
-    <property name="text" translatable="yes">The IP address is not valid</property>
-    <property name="secondary_text" translatable="yes">Check and correct it</property>
+    <property name="secondary_text" translatable="yes">The IP address is not valid, check and correct it</property>
     <signal name="close" handler="on_ip_addrwrong_dialog_close" swapped="no"/>
     <child internal-child="vbox">
       <object class="GtkBox">
@@ -900,13 +906,13 @@
   <object class="GtkMessageDialog" id="database_wrong_dialog">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Error</property>
+    <property name="modal">True</property>
     <property name="type_hint">dialog</property>
     <property name="transient_for">main_window</property>
     <property name="attached_to">main_window</property>
     <property name="message_type">error</property>
     <property name="buttons">ok</property>
-    <property name="text" translatable="yes">Cannot connect to database</property>
-    <property name="secondary_text" translatable="yes">Check for user or database server not started</property>
+    <property name="secondary_text" translatable="yes">Cannot connect to database.</property>
     <child internal-child="vbox">
       <object class="GtkBox">
         <property name="can_focus">False</property>

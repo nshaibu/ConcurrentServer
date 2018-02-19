@@ -20,10 +20,12 @@
 
 #include "server.h"
 
+
 int main(int argc, char *argv[] ) 
 {
 	mysql_library_init(0, NULL, NULL);
 	
+
 	if ( argc < 6 )
 		return 0;
 

@@ -46,6 +46,12 @@ import subprocess as sp
 
 glade_file = "main_window.glade"
 
+class spinner_window(Gtk.Window):
+
+    def __init__(self):
+        super(spinner_window, self).__init__()
+
+
 class server_data():
 
     def __init__(self):
@@ -62,6 +68,8 @@ class server_data():
     def set_sql_hostname(self, host):
         if host is None:
             self.sql_server_host = "localhost"
+        else:
+            self.sql_server_host = str(host)
 
     def set_sql_username(self, name):
         self.sql_server_username = name
@@ -73,7 +81,10 @@ class server_data():
         self.server_ip_addr = str(ipaddr)
 
     def set_server_portnum(self, port):
-        self.server_port_num = str(port) 
+        self.server_port_num = str(port)
+
+    def get_host_ip_addr(self):
+        pass 
 
 
 class uptime:
@@ -166,10 +177,10 @@ class About_MenuItem():
         response = self.about_dialog.run()
         
         if response == Gtk.ResponseType.CLOSE:   
-            self.about_dialog.destroy()
+            self.about_dialog.hide()
 
     def on_About_dialog_close(self, widget):
-        self.about_dialog.destroy()
+        self.about_dialog.hide()
 
 
 class StartToolButton:
@@ -180,6 +191,8 @@ class StartToolButton:
         self.startbutton = self.builder.get_object("start_ToolButton")
         self.start_switch = self.builder.get_object("main_window_switch")
         self.uptime_label = self.builder.get_object("uptime_label")
+
+        self.textview = self.builder.get_object("main_window_textview")
         
         self.start_switch.set_tooltip_text("Server is OFF")
 
@@ -190,7 +203,37 @@ class StartToolButton:
         self.CMD = list()   ##background command list
 
         self.error_dialog = self.builder.get_object("ip_addrwrong_dialog")
-                
+
+    def write_to_textview(self, user_data):             ##callback to write to textview
+        textviewbuff = self.textview.get_buffer()
+
+        if self.backprocess.poll() is not None:
+            outs, err = self.backprocess.communicate()
+            print("me")
+            if outs is not None:
+                textviewbuff.set_text(outs)
+            elif err is not None:
+                textviewbuff.set_text(err)
+
+            return True 
+        else:
+            return False
+
+    def poll_on_child_process(self, user_data):    #I am timeout_add callback function 
+        if self.backprocess.poll() is None:        #for checking whether child process is alive or dead
+            return True
+        else:
+            self.test_serveron = False
+
+            GObject.source_remove(self.timer.timout_id)  #stop uptime timer
+            self.uptime_label.set_label("00:00:00")
+            self.timer.reset_timer()
+
+            self.start_switch.set_active(False)
+            self.start_switch.set_tooltip_text("Server is OFF")
+
+            return False
+
     
     def run(self, widget):
         if self.test_serveron:    #server is on
@@ -207,12 +250,11 @@ class StartToolButton:
             self.test_serveron = False
         else:                #server is off
             if server_info.network_config == False:
-                #self.error_dialog.set_primary_text("Network not configured")
-                #self.error_dialog.format_secondary_text("Give the server port and ip address to listen on")
+                self.error_dialog.format_secondary_text("Give the server port and ip address to listen on")
 
                 response = self.error_dialog.run()
                 if response == Gtk.ResponseType.OK:
-                    self.error_dialog.destroy()
+                    self.error_dialog.hide()
 
                 return
             if server_info.database_config == False:
@@ -221,7 +263,7 @@ class StartToolButton:
 
                 response = self.error_dialog.run()
                 if response == Gtk.ResponseType.OK:
-                    self.error_dialog.destroy()
+                    self.error_dialog.hide()
 
                 return
             
@@ -235,24 +277,32 @@ class StartToolButton:
             self.CMD.append( server_info.sql_server_userpasswd )
             
             try:
-                self.backprocess = sp.Popen(args=self.CMD, universal_newlines=True, stdout=sp.PIPE, stderr=sp.PIPE)
+                self.backprocess = sp.Popen(args=self.CMD, universal_newlines=True, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE)
+#                try:
+#                    database_format_str = '|%s|%s|%s|' % (server_info.sql_server_host, server_info.sql_server_username, server_info.sql_server_userpasswd)
+#                    print(database_format_str)
+#                    self.backprocess.communicate(input=database_format_str, timeout=1)
+#                except sp.TimeoutExpired:
+#                    print("timeout")
+
             except OSError:
                 self.error_dialog.format_secondary_text("[Error]Server cannot start. Check the logs for the reason")
 
                 response = self.error_dialog.run()
                 if response == Gtk.ResponseType.OK:
-                    self.error_dialog.destroy()
+                    self.error_dialog.hide()
 
                 return
             
             self.timer.timout_id = GObject.timeout_add(1000, self.timer.run, None)   ##set up uptime timer
+            GObject.timeout_add(20000, self.poll_on_child_process, None)
+            GObject.timeout_add(10000, self.write_to_textview, None)
+
             self.start_switch.set_active(True)
             self.start_switch.set_tooltip_text("Server is ON")
 
             self.test_serveron = True
 
-
-        
 
 class NetworkPopOver():
 
@@ -294,10 +344,10 @@ class NetworkPopOver():
             response = self.error_dialog.run()
             
             if response == Gtk.ResponseType.OK:
-                self.error_dialog.destroy()
+                self.error_dialog.hide()
             
     def on_ip_addrwrong_dialog_close(self, widget):
-        self.error_dialog.destroy()
+        self.error_dialog.hide()
 
     def verify_ip_addr(self):
         ip = None
@@ -360,7 +410,7 @@ class DatabasePopOver():
             response = self.error_dialog.run()
             
             if response == Gtk.ResponseType.OK:
-                self.error_dialog.destroy()
+                self.error_dialog.hide()
 
         
 
@@ -380,6 +430,8 @@ class DatabasePopOver():
             if db is None:
                 return False
         except MySQLdb.err.OperationalError:
+            return False
+        except MySQLdb.err.InternalError:    #you got to get high or die
             return False
         
         host_res_label = self.builder.get_object("host_result_label")
@@ -401,7 +453,7 @@ class DatabasePopOver():
         return True
 
     def on_database_wrong_dialog_close(self, widget):
-        self.error_dialog.destroy()
+        self.error_dialog.hide()
 
     def on_database_popover_closed(self, widget):
         pass
