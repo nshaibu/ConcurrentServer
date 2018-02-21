@@ -9,9 +9,6 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkEntryCompletion" id="entrycompletion1"/>
-  <object class="GtkTextBuffer" id="textbuffer1">
-    <property name="text" translatable="yes">Logs here</property>
-  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Concurrent Chat Server</property>
@@ -30,13 +27,13 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
-              <object class="GtkMenuItem" id="File_MenuItem">
+              <object class="GtkMenuItem" id="About_MenuItem">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">_File</property>
+                <property name="label" translatable="yes">_Help</property>
                 <property name="use_underline">True</property>
                 <child type="submenu">
-                  <object class="GtkMenu">
+                  <object class="GtkMenu" id="About_dialog_submenu">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
@@ -51,15 +48,6 @@
                     </child>
                   </object>
                 </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkMenuItem" id="About_MenuItem">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">_About</property>
-                <property name="use_underline">True</property>
-                <signal name="activate" handler="on_About_MenuItem_activate" swapped="no"/>
               </object>
             </child>
           </object>
@@ -507,7 +495,7 @@
                 <property name="left_padding">12</property>
                 <child>
                   <object class="GtkScrolledWindow">
-                    <property name="height_request">100</property>
+                    <property name="height_request">120</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="hexpand">True</property>
@@ -520,9 +508,6 @@
                         <property name="hexpand">True</property>
                         <property name="vexpand">True</property>
                         <property name="editable">False</property>
-                        <property name="cursor_visible">False</property>
-                        <property name="buffer">textbuffer1</property>
-                        <property name="overwrite">True</property>
                       </object>
                     </child>
                   </object>
@@ -938,4 +923,8 @@
       </object>
     </child>
   </object>
+  <object class="GtkTextBuffer" id="textbuffer1">
+    <property name="text" translatable="yes">Logs here</property>
+  </object>
+  <object class="GtkTextBuffer" id="textbuffer2"/>
 </interface>

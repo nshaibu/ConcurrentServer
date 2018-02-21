@@ -52,6 +52,8 @@
 #define server_debug (void)0
 #endif
 
+#define SERVER_MSG(format, msg...) ({  fprintf(stderr, "(msg) [%s %s] " format "\n", __DATE__, __TIME__, ##msg); })
+
 #define GET_LOG_FILENAME(file) ({\
                                char *env_=getenv("HOME"); \
                                if (env_) \

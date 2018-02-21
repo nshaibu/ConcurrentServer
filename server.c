@@ -63,6 +63,7 @@ void make_server() {
                   (void (*)(void*))mysql_close);
    }
 
+	SERVER_MSG("Connecting to database server on host [%s]...", my_info.server_name);
 	if (! mysql_real_connect( mysql_con,
                              my_info.server_name,
                              my_info.user_name,
@@ -81,7 +82,8 @@ void make_server() {
                   MYSQL_CONNECTION_FAILED, 
                   mysql_con,
                   (void (*)(void*))mysql_close);
-	}
+	} else
+		SERVER_MSG("Connected to database server on host [%s]", my_info.server_name);
 	
 	//check whether database exist
 	sprintf( db_query, 
@@ -98,9 +100,8 @@ void make_server() {
                   MYSQL_QUERY_FAILED, 
                   mysql_con, 
                   (void (*)(void*))mysql_close);
-	}
-	
-	server_debug("Checked whether %s exist.", my_info.database_name);
+	} else 
+		SERVER_MSG("Checked whether database [%s] exist on host [%s].", my_info.database_name, my_info.server_name);
 	
 	//check result of the query executed
 	mysql_res = mysql_store_result(mysql_con);
@@ -131,7 +132,8 @@ void make_server() {
                   MYSQL_QUERY_FAILED, 
                   mysql_con, 
                   (void (*)(void*))mysql_close);
-		}
+		} else 
+			SERVER_MSG("Created database [%s] on host [%s]", my_info.database_name, my_info.server_name);
 		
 		memset(db_query, '\0', sizeof(db_query));
 		sprintf( db_query,
@@ -223,12 +225,13 @@ void make_server() {
 			log_errors( NULL,
                      STD_ERRORS, 
                      DONT_EXIT, 
-                     NO_WRITE, 
+                     WRITE_STDDER, 
                      LOGS_WARNING, 
                      SOCKET_NOT_CREATED, 
                      &connection_socket, 
                      error_close_fd );
-		}
+		} else
+			SERVER_MSG("User connecting to the server. %d users have to connected.", number_of_users);
 		
 		thr_node = create_thread_node(-1, connection_socket);
 		
@@ -240,7 +243,7 @@ void make_server() {
 					log_errors( NULL,
                            STD_ERRORS, 
                            DONT_EXIT, 
-                           NO_WRITE, 
+                           WRITE_STDDER, 
                            LOGS_WARNING, 
                            THREAD_NOT_START, 
                            NULL, 

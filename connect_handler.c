@@ -136,6 +136,7 @@ static int authenticator(struct thread_block *blk, const char name[], const char
 	mysql_free_result(mysql_res);
 		
 	pthread_mutex_unlock(&addrTable_mutex);
+	number_of_users = number_of_users + 1;
 	insertInAddrTable(blk->userid, (void*)blk);   //put userid and thread_block address in address table
 	
 	blk->user_auth = USER_AUTH;   //set that user has been authenticated
@@ -248,7 +249,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 				pthread_cancel( pthread_self() );
 			}
 			
-			destroy_packet(pk);
+			//destroy_packet(pk);
 		break;
 		case GET_ALL_USERS_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);

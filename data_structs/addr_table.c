@@ -25,6 +25,7 @@ static int addrTable_len = 0;
 static Addr_Table addrs[MAX_ADDR_TABLE_SIZE] = {0};
 
 pthread_mutex_t addrTable_mutex = PTHREAD_MUTEX_INITIALIZER;
+unsigned int number_of_users = 0;   //global variable for the number of users on the system
 
 int get_addr_table_len() { return addrTable_len; }
 

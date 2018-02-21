@@ -26,6 +26,7 @@
 
 #include "thread_info_block.h"
 
+extern unsigned int number_of_users;
 extern pthread_mutex_t addrTable_mutex;
 
 typedef struct _addr {

@@ -20,11 +20,11 @@
 #===========================================================================================
 
 import gi
-import sys 
+import sys, os 
 import signal
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GObject 
+from gi.repository import Gtk, GObject, GLib, Pango 
 
 try:
     import ipaddress as ip_object
@@ -45,11 +45,58 @@ except ImportError as err:
 import subprocess as sp
 
 glade_file = "main_window.glade"
+        
+class spawn_async_process:
+    def __init__(self, cmd=None):
+        self.pid = None
 
-class spinner_window(Gtk.Window):
+        self.async_proc_stdin = None
+        self.async_proc_stdout = None 
+        self.async_proc_stderr = None
 
-    def __init__(self):
-        super(spinner_window, self).__init__()
+        self.io_input = None
+        self.io_output = None
+        self.io_err = None
+
+        #for callback that check whether stdout and stderr are ready
+        self.source_id_stdout = None
+        self.source_id_stderr = None
+
+        self.CMD = cmd
+
+    def spawn(self):
+        if self.CMD is None:
+            return False
+        try:
+            result = GLib.spawn_async( self.CMD,
+                                      flags=GLib.SPAWN_DO_NOT_REAP_CHILD,
+                                      standard_input=True,
+                                      standard_output=True,
+                                      standard_error=True )
+                                    
+            (self.pid, self.async_proc_stdin, self.async_proc_stdout, self.async_proc_stderr) = result
+            
+        except GLib.GError:
+            return False
+        
+        if self.async_proc_stdin is not None:
+            self.io_input = GLib.IOChannel.unix_new(self.async_proc_stdin)
+        
+        if self.async_proc_stdout is not None:
+            self.io_output = GLib.IOChannel.unix_new(self.async_proc_stdout)
+        
+        if self.async_proc_stderr is not None:
+            self.io_err = GLib.IOChannel.unix_new(self.async_proc_stderr)
+        
+        return True
+
+    def send_signal(self, sig):
+        if self.pid is not None:
+            try:
+                os.kill(self.pid, sig)
+            except ProcessLookupError:
+                pass
+        
 
 
 class server_data():
@@ -128,7 +175,7 @@ class MainWindow():
 
         #menu items
         self.about_menuitem = About_MenuItem(self.builder)
-        self.about_menuitem.aboutmenu.connect("activate", self.about_menuitem.run) ##not working
+        self.about_menuitem.aboutmenu.connect("activate-current", self.about_menuitem.run) ##not working
 
         #popovers initialised
         self.startbutton_act = StartToolButton(self.builder)
@@ -163,12 +210,13 @@ class MainWindow():
             
         Gtk.main_quit()
 
+
 class About_MenuItem():
 
     def __init__(self, builder):
         self.builder = builder 
 
-        self.aboutmenu = self.builder.get_object("About_MenuItem")
+        self.aboutmenu = self.builder.get_object("About_dialog_submenu")
         
         self.about_dialog = self.builder.get_object("About_dialog")
         self.about_dialog.connect("close", self.on_About_dialog_close)
@@ -192,8 +240,13 @@ class StartToolButton:
         self.start_switch = self.builder.get_object("main_window_switch")
         self.uptime_label = self.builder.get_object("uptime_label")
 
+        #textview widgets configuration
         self.textview = self.builder.get_object("main_window_textview")
+        self.textview_buffer = self.textview.get_buffer()
         
+        self.textview_tag = self.textview_buffer.create_tag("textview_format", foreground="blue", background="red",)
+
+
         self.start_switch.set_tooltip_text("Server is OFF")
 
         self.test_serveron = False     #boolean for whether server is on or off
@@ -204,43 +257,51 @@ class StartToolButton:
 
         self.error_dialog = self.builder.get_object("ip_addrwrong_dialog")
 
-    def write_to_textview(self, user_data):             ##callback to write to textview
-        textviewbuff = self.textview.get_buffer()
-
-        if self.backprocess.poll() is not None:
-            outs, err = self.backprocess.communicate()
-            print("me")
-            if outs is not None:
-                textviewbuff.set_text(outs)
-            elif err is not None:
-                textviewbuff.set_text(err)
-
+    def write_stdout_textview(self, fd, condition, user_data):             ##callback to write to textview
+        
+        if condition is GLib.IO_IN:
+            line = fd.readline()
+            self.textview_buffer.insert_at_cursor( line )
             return True 
-        else:
+        elif condition is GLib.IO_HUP | GLib.IO_IN:
+            GLib.source_remove( self.backprocess.source_id_stdout )
             return False
 
-    def poll_on_child_process(self, user_data):    #I am timeout_add callback function 
-        if self.backprocess.poll() is None:        #for checking whether child process is alive or dead
-            return True
-        else:
-            self.test_serveron = False
+    def write_stderr_textview(self, fd, condition, user_data):
 
-            GObject.source_remove(self.timer.timout_id)  #stop uptime timer
-            self.uptime_label.set_label("00:00:00")
-            self.timer.reset_timer()
-
-            self.start_switch.set_active(False)
-            self.start_switch.set_tooltip_text("Server is OFF")
-
+        if condition is GLib.IO_IN:
+            line = fd.readline()
+            start = self.textview_buffer.get_end_iter()
+            self.textview_buffer.insert_at_cursor( line )
+            self.textview_buffer.apply_tag(self.textview_tag, start, self.textview_buffer.get_end_iter())
+            
+            return True 
+        elif condition is GLib.IO_HUP | GLib.IO_IN:
+            GLib.source_remove( self.backprocess.source_id_stderr )
             return False
+
+    def watch_child_process(self,pid, condition, user_data):    #I am timeout_add callback function 
+                                                               #for checking whether child process is alive or dead
+        self.test_serveron = False
+
+        GObject.source_remove(self.timer.timout_id)  #stop uptime timer
+        self.uptime_label.set_label("00:00:00")
+        self.timer.reset_timer()
+
+        self.start_switch.set_active(False)
+        self.start_switch.set_tooltip_text("Server is OFF")
+
+        GLib.spawn_close_pid(self.backprocess.pid)
+
+        return False
 
     
     def run(self, widget):
         if self.test_serveron:    #server is on
             if self.backprocess is not None:
-                self.backprocess.send_signal(signal.SIGINT)
-                
                 GObject.source_remove(self.timer.timout_id)  #stop uptime timer
+                self.backprocess.send_signal(signal.SIGINT)
+
                 self.uptime_label.set_label("00:00:00")     #reset timer
                 self.timer.reset_timer()
                 
@@ -258,7 +319,6 @@ class StartToolButton:
 
                 return
             if server_info.database_config == False:
-                #self.error_dialog.set_primary_text("Database not configured")
                 self.error_dialog.format_secondary_text("Configure the database to connect to it")
 
                 response = self.error_dialog.run()
@@ -276,28 +336,26 @@ class StartToolButton:
             self.CMD.append( server_info.sql_server_username )
             self.CMD.append( server_info.sql_server_userpasswd )
             
-            try:
-                self.backprocess = sp.Popen(args=self.CMD, universal_newlines=True, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE)
-#                try:
-#                    database_format_str = '|%s|%s|%s|' % (server_info.sql_server_host, server_info.sql_server_username, server_info.sql_server_userpasswd)
-#                    print(database_format_str)
-#                    self.backprocess.communicate(input=database_format_str, timeout=1)
-#                except sp.TimeoutExpired:
-#                    print("timeout")
+            self.backprocess = spawn_async_process(self.CMD)     ##initialize object
 
-            except OSError:
-                self.error_dialog.format_secondary_text("[Error]Server cannot start. Check the logs for the reason")
+            if self.backprocess.spawn() is False:              #create the asynchronous process
+                self.error_dialog.format_secondary_text("[Error]Server cannot start. Check the log file(concurrent_chat_xx_xx_xx.log) in your home directory")
 
                 response = self.error_dialog.run()
                 if response == Gtk.ResponseType.OK:
-                    self.error_dialog.hide()
+                    self.error_dialog.hide() 
 
-                return
-            
+                return 
+
+            GLib.child_watch_add(self.backprocess.pid, self.watch_child_process, None, GLib.PRIORITY_HIGH)            
             self.timer.timout_id = GObject.timeout_add(1000, self.timer.run, None)   ##set up uptime timer
-            GObject.timeout_add(20000, self.poll_on_child_process, None)
-            GObject.timeout_add(10000, self.write_to_textview, None)
-
+            
+            if self.backprocess.io_output is not None:
+                self.backprocess.source_id_stdout = self.backprocess.io_output.add_watch(GLib.IO_IN | GLib.IO_HUP, self.write_stderr_textview, None)
+            
+            if self.backprocess.io_err is not None:
+                self.backprocess.source_id_stderr = self.backprocess.io_err.add_watch(GLib.IO_IN | GLib.IO_HUP, self.write_stdout_textview, None)
+            
             self.start_switch.set_active(True)
             self.start_switch.set_tooltip_text("Server is ON")
 
