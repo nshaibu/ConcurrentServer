@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=CCServer
+GenericName=Concurrent Chat Server
+Encoding=UTF-8
+Comment=Fast Concurrent Chat Server
+Terminal=False
+Exec=/home/nafiu/Desktop/Server/gui/main.py
+Icon=/home/nafiu/Desktop/Server/icons/network-server.png
+Categories=Application;Server;Utility

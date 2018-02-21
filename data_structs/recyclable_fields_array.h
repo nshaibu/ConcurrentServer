@@ -1,0 +1,4 @@
+#ifndef RECYCLABLE_FIELDS_ARRAY
+#define RECYCLABLE_FIELDS_ARRAY
+
+#endif
