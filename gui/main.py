@@ -240,11 +240,14 @@ class StartToolButton:
         self.start_switch = self.builder.get_object("main_window_switch")
         self.uptime_label = self.builder.get_object("uptime_label")
 
+        #resolving the location of executable bin server
+        self.bin_server_loc = os.sep.join( [os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "main"] )  
+
         #textview widgets configuration
         self.textview = self.builder.get_object("main_window_textview")
         self.textview_buffer = self.textview.get_buffer()
         
-        self.textview_tag = self.textview_buffer.create_tag("textview_format", foreground="blue", background="red",)
+        self.textview_tag = self.textview_buffer.create_tag("textview_format",  foreground="blue", background="red")
 
 
         self.start_switch.set_tooltip_text("Server is OFF")
@@ -271,9 +274,9 @@ class StartToolButton:
 
         if condition is GLib.IO_IN:
             line = fd.readline()
-            start = self.textview_buffer.get_end_iter()
+            #start = self.textview_buffer.get_end_iter()
             self.textview_buffer.insert_at_cursor( line )
-            self.textview_buffer.apply_tag(self.textview_tag, start, self.textview_buffer.get_end_iter())
+            self.textview_buffer.apply_tag(self.textview_tag, self.textview_buffer.get_start_iter(), self.textview_buffer.get_end_iter())
             
             return True 
         elif condition is GLib.IO_HUP | GLib.IO_IN:
@@ -329,7 +332,7 @@ class StartToolButton:
             
             self.CMD.clear()
 
-            self.CMD.append( '/home/nafiu/Desktop/Server/main' )   #program name
+            self.CMD.append( self.bin_server_loc )   #program name
             self.CMD.append( server_info.server_port_num )
             self.CMD.append( server_info.server_ip_addr )
             self.CMD.append( server_info.sql_server_host )
@@ -346,7 +349,11 @@ class StartToolButton:
                     self.error_dialog.hide() 
 
                 return 
-
+            
+            '''
+            Watch the subprocess if it exits then change any variable and gui settings
+            respectively.  
+            '''
             GLib.child_watch_add(self.backprocess.pid, self.watch_child_process, None, GLib.PRIORITY_HIGH)            
             self.timer.timout_id = GObject.timeout_add(1000, self.timer.run, None)   ##set up uptime timer
             
