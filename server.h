@@ -36,6 +36,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "./libs/generic_linked_list.h"
 #include "./error_logs/errno_logs.h"
 #include "./data_structs/thread_info_block.h"
 #include "./data_structs/addr_table.h"

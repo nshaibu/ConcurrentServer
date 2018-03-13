@@ -26,7 +26,7 @@
 
 time_t get_curr_time(void) { return  time(NULL); } //function pointer
 
-struct thread_block *create_thread_node(unsigned tid, unsigned sockfd) 
+struct thread_block *create_thread_node(struct list_node *tid, unsigned sockfd, Generic_list *list) 
 {
 	struct thread_block *node = (struct thread_block*)malloc(sizeof(struct thread_block));
 	if (node == (struct thread_block*)NULL) {
@@ -34,19 +34,18 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
                   STD_ERRORS, 
                   DONT_EXIT, 
                   WRITE_STDDER, 
-                  LOGS_WARNING, 
+                  LOGS_FATAL_ERRORS, 
                   MEMORY_NOT_ALLOC, 
                   NULL, 
                   error_ignore);
+
+		return NULL;
 	}
 	
-	node->tid = tid;
 	node->socket = sockfd;
 	
 	node->start_time = time(NULL);
 	node->curr_time = get_curr_time;
-	
-	node->node_op = THREAD_NOOP;
 	
 	node->userid = -1;
 	memset(node->username, '\0', sizeof(node->username));
@@ -54,14 +53,19 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
 	
 	node->con = mysql_init(NULL);
 	if ( node->con == NULL ) {
-		log_errors( &(node->tid),
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_INIT_FAILED, 
-                  node,
-                  (void (*)(void*))destroy_thread_node);
+		log_errors( NULL,
+                  	MYSQL_ERRORS, 
+                  	DONT_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	MYSQL_INIT_FAILED, 
+                  	NULL,
+                  	error_ignore );
+		
+		close(node->socket);
+		
+		free(node);
+		return NULL;
    }
 
 	if (! mysql_real_connect( node->con,
@@ -72,22 +76,49 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
                              0, 
                              NULL,
                              0
-									)
+							)
 	) {
-		log_errors( &(node->tid),
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_CONNECTION_FAILED, 
-                  node,
-                  (void (*)(void*))destroy_thread_node );
+		log_errors( NULL,
+                  	MYSQL_ERRORS, 
+                 	DONT_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	MYSQL_CONNECTION_FAILED, 
+                  	NULL,
+                  	error_ignore );
+		
+		mysql_close(node->con);
+		close(node->socket);
+
+		free(node);
+
+		return NULL;
    }
 	
 	node->loc.longitude = -1;
 	node->loc.lattitude = -1;
-	//node->out_queue = create_queue();
+	
 	node->in_queue = create_queue();
+	if (node->in_queue == NULL) {
+		errno = ENOMEM;
+		log_errors( NULL,
+                  STD_ERRORS, 
+                  DONT_EXIT, 
+                  WRITE_STDDER, 
+                  LOGS_FATAL_ERRORS, 
+                  "Cannot initialize message queue", 
+                  NULL, 
+                  error_ignore);
+
+		mysql_close(node->con);
+		close(node->socket);
+		free(node);
+
+		return NULL;
+	}
+
+	node->tid = tid;
+	node->tid_list = list;
 	
 	return node;
 }
@@ -95,7 +126,14 @@ struct thread_block *create_thread_node(unsigned tid, unsigned sockfd)
 void destroy_thread_node(struct thread_block *node) {
 	close(node->socket);
 	mysql_close(node->con);
-	
+
+	node->user_auth = USER_TO_EXIT;  //kill connection handler thread
+
+	list_lock_acquire( node->tid_list );
+	SERVER_MSG("Detroying list node");
+	destroy_list_node(node->tid_list, node->tid, free);
+	list_lock_release( node->tid_list );
+
 	destroy_queue(node->in_queue);
 	
 	free(node);
@@ -105,7 +143,7 @@ void set_thread_node_socket(struct thread_block *th, int sockfd) {
 	th->socket = sockfd;
 }
 
-void set_thread_node_tid(struct thread_block *th, int tid) {
+void set_thread_node_tid(struct thread_block *th, struct list_node *tid) {
 	th->tid = tid;
 }
 

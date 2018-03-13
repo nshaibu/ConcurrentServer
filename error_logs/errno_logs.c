@@ -22,6 +22,43 @@
 
 static struct logs_struct logs;
 
+void get_ascii_time(char time_buf[]) 
+{
+	int len = 0;
+
+	time_t t = time(NULL);
+	if ( ctime_r(&t, time_buf) != NULL ) {
+	    len = strlen(time_buf);
+	    time_buf[len-1]='\0';
+    } else
+        strcpy(time_buf, "Mon Jan 29 00:00:00 2018");  //date I wrote this module
+}
+
+void SERVER_MSG(const char *format, ...) 
+{
+	char time_buf[TIME_BUZ];
+
+	get_ascii_time(time_buf);
+
+	int len = 9 + TIME_BUZ + strlen(format);
+
+	va_list args;
+	char _format[len];
+
+	strcpy(_format, "(msg) [");
+	
+	strcat(_format, time_buf);
+	strcat(_format, "] ");
+	strcat(_format, format);
+	
+	va_start(args, format);
+	vfprintf(stderr, _format, args);
+	va_end(args);
+
+	fprintf(stderr, "\n");
+}
+
+
 /*Function pointer to close sockets and file descriptors*/
 void error_close_fd(void *fd) {
 	close( *(int*)fd );
@@ -55,7 +92,7 @@ void init_logs_object()
 
 
 void log_errors(
-                pthread_t *thread_id,       /*The Thread id [if not thread then assign NULL]*/
+                struct list_node *thread_id,       /*The Thread id [if not thread then assign NULL]*/
                 error_type errtype,         /*Error type whether [MYSQL_ERRORS/STD_ERRORS]*/
                 do_exit ex,                 /*Determine whether to exit the program [DO_EXIT/DONT_EXIT]*/
                 write_ops op,               /*The stream struct to write to [WRITE_STDOUT/WRITE_STDDER/WRITE_BOTH_STDOUT_STDERR]*/

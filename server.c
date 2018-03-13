@@ -17,14 +17,16 @@ struct mysql_info my_info;		//mysql server connection information
 static int kill_server = 0;					/*if none zero, kill server*/
 
 
-void set_net_data(int port, const char *ip) {
+void set_net_data(int port, const char *ip)
+{
 	net_info.socket = -1;
 	net_info.port = port;
 	strcpy(net_info.ip_addr, ip);
 }
 
 
-void set_mysql_data(const char *serv, const char *user, const char *pwd, const char *dbname) {
+void set_mysql_data(const char *serv, const char *user, const char *pwd, const char *dbname) 
+{
 	strcpy(my_info.server_name, serv);
 	strcpy(my_info.user_name, user);
 	strcpy(my_info.user_password, pwd);
@@ -36,31 +38,47 @@ static void sig_handler(int sig) {
 	kill_server = 23;
 }
 
-void make_server() {
+void make_server() 
+{
 	struct thread_block *thr_node = NULL; //Thread info nodes
+	Generic_list *thread_list = NULL;   //list of thread ids
 	
 	MYSQL *mysql_con = NULL;			//main mysql server connection handler
 	MYSQL_RES *mysql_res = NULL;
 	char db_query[MYSQL_QUERY_BUFF];
 	
 	int connection_socket, ret, size;
-	int thread_count = 0;   //thread count
+	//int thread_count = 0;   //thread count
 	
-	pthread_t tid[MAX_CONN];
+	struct list_node *thread_id_node = NULL;
 	pthread_attr_t pattr;		//pthread attributes
 	
 	struct sigaction sa;
 	
+	thread_list = create_generic_list(ENABLE_LOCK);
+	if (thread_list == NULL) {
+		log_errors( NULL,
+					STD_ERRORS,
+					DO_EXIT,
+					WRITE_STDDER,
+					LOGS_FATAL_ERRORS,
+					"Cannot initialize generic list for thread IDs",
+					NULL,
+					error_ignore
+				  );
+	} else
+		SERVER_MSG("Initialized generic list for thread ID");
+
 	mysql_con = mysql_init(NULL);
 	if (mysql_con == NULL) {
 		log_errors( NULL,
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_INIT_FAILED, 
-                  mysql_con,
-                  (void (*)(void*))mysql_close);
+                  	MYSQL_ERRORS, 
+                  	DO_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	MYSQL_INIT_FAILED, 
+                  	mysql_con,
+                  	(void (*)(void*))mysql_close);
    }
 
 	SERVER_MSG("Connecting to database server on host [%s]...", my_info.server_name);
@@ -75,13 +93,13 @@ void make_server() {
 									)
 	) {
 		log_errors( NULL,
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_CONNECTION_FAILED, 
-                  mysql_con,
-                  (void (*)(void*))mysql_close);
+                  	MYSQL_ERRORS, 
+                  	DO_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	MYSQL_CONNECTION_FAILED, 
+                  	mysql_con,
+                  	(void (*)(void*))mysql_close);
 	} else
 		SERVER_MSG("Connected to database server on host [%s]", my_info.server_name);
 	
@@ -93,13 +111,13 @@ void make_server() {
 			
 	if ( mysql_query(mysql_con, db_query) != 0 ) {
 		log_errors( NULL,
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_QUERY_FAILED, 
-                  mysql_con, 
-                  (void (*)(void*))mysql_close);
+                  	MYSQL_ERRORS, 
+                  	DO_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	MYSQL_QUERY_FAILED, 
+                  	mysql_con, 
+                  	(void (*)(void*))mysql_close);
 	} else 
 		SERVER_MSG("Checked whether database [%s] exist on host [%s].", my_info.database_name, my_info.server_name);
 	
@@ -125,13 +143,13 @@ void make_server() {
 			   
 		if ( mysql_query(mysql_con, db_query) !=0) {
 			log_errors( NULL,
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_QUERY_FAILED, 
-                  mysql_con, 
-                  (void (*)(void*))mysql_close);
+                  		MYSQL_ERRORS, 
+                  		DO_EXIT, 
+                  		WRITE_STDDER, 
+                  		LOGS_FATAL_ERRORS, 
+                  		MYSQL_QUERY_FAILED, 
+                  		mysql_con, 
+                  		(void (*)(void*))mysql_close);
 		} else 
 			SERVER_MSG("Created database [%s] on host [%s]", my_info.database_name, my_info.server_name);
 		
@@ -149,13 +167,13 @@ void make_server() {
 				 
 		if ( mysql_query(mysql_con, db_query) !=0 ) {
 			log_errors( NULL,
-                  MYSQL_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  MYSQL_QUERY_FAILED, 
-                  mysql_con, 
-                  (void (*)(void*))mysql_close);
+                  		MYSQL_ERRORS, 
+                  		DO_EXIT, 
+                  		WRITE_STDDER, 
+                  		LOGS_FATAL_ERRORS, 
+                  		MYSQL_QUERY_FAILED, 
+                  		mysql_con, 
+                  		(void (*)(void*))mysql_close);
 		}
 		
 		server_debug("Created database %s.", my_info.database_name);
@@ -169,13 +187,13 @@ void make_server() {
 	
 	if ( sigaction(SIGINT, &sa, NULL) == -1 ) {
 		log_errors( NULL,
-                  STD_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  SIGNAL_FAILED, 
-                  NULL, 
-                  error_ignore);
+                  	STD_ERRORS, 
+                  	DO_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	SIGNAL_FAILED, 
+                  	NULL, 
+                  	error_ignore);
 	}
 	
 	
@@ -189,14 +207,15 @@ void make_server() {
 	
 	if ( (net_info.socket = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) { 
 		log_errors( NULL,
-                  STD_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  SOCKET_NOT_CREATED, 
-                  &(net_info.socket), 
-                  error_close_fd);
-	}
+                  	STD_ERRORS, 
+                  	DO_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	SOCKET_NOT_CREATED, 
+                  	&(net_info.socket), 
+                  	error_close_fd);
+	} else
+		SERVER_MSG("Creating a TCP socket...");
 	
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(net_info.port);
@@ -205,15 +224,17 @@ void make_server() {
 	
 	if ( bind(net_info.socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0 ) {
 		log_errors( NULL,
-                  STD_ERRORS, 
-                  DO_EXIT, 
-                  WRITE_STDDER, 
-                  LOGS_FATAL_ERRORS, 
-                  SOCKET_BINDING_FAILED, 
-                  &(net_info.socket), 
-                  error_close_fd);
-	}
+                  	STD_ERRORS, 
+                  	DO_EXIT, 
+                  	WRITE_STDDER, 
+                  	LOGS_FATAL_ERRORS, 
+                  	SOCKET_BINDING_FAILED, 
+                  	&(net_info.socket), 
+                  	error_close_fd);
+	} else 
+		SERVER_MSG("Binding socket to IP:[%s] and port number:[%d]...", net_info.ip_addr, net_info.port);
 	
+	SERVER_MSG("Listening on port:[%d] for connection...", net_info.port);
 	listen(net_info.socket, MAX_CONN);
 	
 	while(1) {
@@ -222,62 +243,101 @@ void make_server() {
 		size = sizeof(cli_addr);
 		connection_socket = accept(net_info.socket, (struct sockaddr*)&cli_addr, (socklen_t*)&size);
 		if ( connection_socket < 0 ) {
-			log_errors( NULL,
-                     STD_ERRORS, 
-                     DONT_EXIT, 
-                     WRITE_STDDER, 
-                     LOGS_WARNING, 
-                     SOCKET_NOT_CREATED, 
-                     &connection_socket, 
-                     error_close_fd );
-		} else
-			SERVER_MSG("User connecting to the server. %d users have to connected.", number_of_users);
+			
+			if (errno != EINTR) {
+				log_errors( NULL,
+                	     	STD_ERRORS, 
+                    	 	DONT_EXIT, 
+                    	 	WRITE_STDDER, 
+                    	 	LOGS_WARNING, 
+                     	 	SOCKET_NOT_CREATED, 
+                     	 	NULL, 
+                     	 	error_ignore );
+				
+				continue;
+			} else 
+				break;
+
+		} else 
+			SERVER_MSG("User connecting to the server. %d users have connected.", thread_list->list_len);
 		
-		thr_node = create_thread_node(-1, connection_socket);
+		
+		thread_id_node = create_list_node(sizeof(pthread_t));
+		if (thread_id_node == NULL) {
+			shutdown(connection_socket, SHUT_RDWR);
+
+			errno = ENOMEM;
+			log_errors( NULL,
+						STD_ERRORS,
+						DONT_EXIT,
+						WRITE_STDDER,
+						LOGS_INFO,
+						"Cannot create list nodes",
+						&connection_socket,
+						error_close_fd );
+
+			continue;
+		}
+
+		thr_node = create_thread_node(NULL, connection_socket, thread_list);
 		
 		if ( thr_node != NULL ) {
-			
-			if ( thread_count <= MAX_CONN ) {
-				ret = pthread_create(&tid[thread_count], &pattr, connection_handler, (void*)thr_node); 
-				if ( ret != 0 ) {
-					log_errors( NULL,
-                           STD_ERRORS, 
-                           DONT_EXIT, 
-                           WRITE_STDDER, 
-                           LOGS_WARNING, 
-                           THREAD_NOT_START, 
-                           NULL, 
-                           error_ignore );
-					destroy_thread_node(thr_node);
+
+			ret = pthread_create((pthread_t*)thread_id_node->data, &pattr, connection_handler, (void*)thr_node); 
+			if ( ret != 0 ) {
+				log_errors( NULL,
+                           	STD_ERRORS, 
+                           	DONT_EXIT, 
+                           	WRITE_STDDER, 
+                           	LOGS_WARNING, 
+                           	THREAD_NOT_START, 
+                           	NULL, 
+                           	error_ignore );
+
+				destroy_thread_node(thr_node);
+			} else 
+				set_thread_node_tid(thr_node, thread_id_node);
 				
-				} else {
-					set_thread_node_tid(thr_node, tid[thread_count]); 
-				}
-				
-			} else {
-					log_errors( NULL,
-                  STD_ERRORS, 
-                  DONT_EXIT, 
-                  NO_WRITE, 
-                  LOGS_INFO, 
-                  MAX_CON_REACH, 
-                  thr_node, 
-                  (void(*)(void*))destroy_thread_node);
-			}
+		} else {
+			shutdown(connection_socket, SHUT_RDWR);
 			
-			thread_count++;
+			errno = ENOMEM;
+			log_errors( NULL,
+                  		STD_ERRORS, 
+                  		DONT_EXIT, 
+                  		WRITE_STDDER, 
+                  		LOGS_INFO, 
+                  		"Cannot create thread information block(TIB)", 
+                  		&connection_socket, 
+                  		error_close_fd );
+
+			free(thread_id_node->data);
+			free(thread_id_node);
 		}
+
 	}
 	
-	//destroy_addrTable();   //asked the threads to stop
+	SERVER_MSG("Server shutting down...");
+
+	while (thread_list->list_len > 0) 
+	{
+		pthread_t *data = (pthread_t*)list_popfront(thread_list);
+		if (data != NULL) { 
+			pthread_cancel(*data);
+			pthread_join(*data, NULL);
+		}
+	}
+
+	list_lock_acquire( thread_list );
+	destroy_generic_list( thread_list, free);
 	
-	for (int i=0; i<thread_count; i++) pthread_cancel(tid[i]);
-	for (int i=0; i<thread_count; i++) pthread_join(tid[i], NULL);
 	pthread_attr_destroy(&pattr);
 	
 	mysql_close(mysql_con);
 	destroy_logs_object();
 	close(net_info.socket);
+	
+	SERVER_MSG("Server Shutdown!");
 }
 
 

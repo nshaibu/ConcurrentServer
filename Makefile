@@ -1,11 +1,19 @@
 # -*-Makefile -*-
 
+ENABLE_DEBUGGING = y
+
 CC=gcc
 LIBS=-lpthread
 MYSQL_LIBS=`mysql_config --cflags --libs`
-DEFS=-D_REENTRANT -DSERVER_DEBUG#-DTRY_CON
+DEFS=-D_REENTRANT #-DTRY_CON
 OPTS=-g -std=gnu99 -Wall #-Werror
-OBJS=addr_table.o packets.o queue.o thread_info_block.o server.o errno_logs.o connect_handler.o
+OBJS=addr_table.o packets.o queue.o thread_info_block.o \
+	 server.o errno_logs.o connect_handler.o \
+	 generic_linked_list.o
+
+ifeq ($(ENABLE_DEBUGGING), y)
+DEFS += -DSERVER_DEBUG
+endif
 
 main: ./main.c $(OBJS)
 	$(CC) $(DEFS) $(OPTS) -o main main.c $(OBJS) $(LIBS) $(MYSQL_LIBS)
@@ -15,6 +23,9 @@ server.o: ./server.c
 
 queue.o: ./libs/queue.c
 	$(CC) $(DEFS) $(OPTS) -c ./libs/queue.c $(MYSQL_LIBS)
+
+generic_linked_list.o: ./libs/generic_linked_list.c 
+	$(CC) $(DEFS) $(OPTS) -c ./libs/generic_linked_list.c $(MYSQL_LIBS)
 
 iterator.o: ./libs/iterator.c
 	$(CC) $(DEFS) $(OPTS) -c ./libs/iterator.c

@@ -20,12 +20,35 @@
 
 #include "connect_handler.h"
 
-static inline void send_msg_dontwait(struct thread_block *blk, const char *msg){
+static inline void send_msg_dontwait(struct thread_block *blk, const char *msg)
+{
 	send(blk->socket, msg, strlen(msg), MSG_DONTWAIT);
 }
 
+static inline void init_connection_handler(struct thread_block *blk)
+{	
+	list_lock_acquire(blk->tid_list);
+	if ( blk->tid_list->list_len > MAX_CONN ) {
+		
+		blk->user_auth = USER_TO_EXIT;
+		close(blk->socket);
+		
+		list_lock_release(blk->tid_list);
+		
+		pthread_cancel( pthread_self() );
+		pthread_testcancel();
+	} else {
+		
+		append_list_node(blk->tid_list, blk->tid);
+		
+		list_lock_release(blk->tid_list);
+	}
+	
+} 
 
-static int registrator(struct thread_block *blk, const char *name, const char *passwd){
+
+static int registrator(struct thread_block *blk, const char *name, const char *passwd)
+{
 	char db_query[MYSQL_QUERY_BUFF];
 	MYSQL_RES *mysql_res = NULL;
 	
@@ -34,7 +57,7 @@ static int registrator(struct thread_block *blk, const char *name, const char *p
 			 my_info.database_name, name, passwd);
 			 
 	if ( mysql_query(blk->con, db_query) !=0 ) {
-		log_errors( &(blk->tid),
+		log_errors( blk->tid,
                   MYSQL_ERRORS, 
                   DO_EXIT, 
                   NO_WRITE, 
@@ -53,7 +76,7 @@ static int registrator(struct thread_block *blk, const char *name, const char *p
 					my_info.database_name, name, passwd);
 					
 		if ( mysql_query(blk->con, db_query) !=0 ) {
-			log_errors( &(blk->tid),
+			log_errors( blk->tid,
                   MYSQL_ERRORS, 
                   DO_EXIT, 
                   NO_WRITE, 
@@ -69,7 +92,8 @@ static int registrator(struct thread_block *blk, const char *name, const char *p
 }
 
 
-static int authenticator(struct thread_block *blk, const char name[], const char passwd[]) {
+static int authenticator(struct thread_block *blk, const char name[], const char passwd[]) 
+{
 	char db_query[MYSQL_QUERY_BUFF];
 	MYSQL_RES *mysql_res = NULL;
 	MYSQL_ROW mysql_row;
@@ -79,7 +103,7 @@ static int authenticator(struct thread_block *blk, const char name[], const char
 			   my_info.database_name, name, passwd);
 	
 	if ( mysql_query(blk->con, db_query) !=0 ) {
-		log_errors( &(blk->tid),
+		log_errors( blk->tid,
                   MYSQL_ERRORS, 
                   DO_EXIT, 
                   NO_WRITE, 
@@ -93,7 +117,7 @@ static int authenticator(struct thread_block *blk, const char name[], const char
 	if (mysql_res == NULL) {
 		mysql_free_result(mysql_res);
 		
-		log_errors( &(blk->tid),
+		log_errors( blk->tid,
                   MYSQL_ERRORS, 
                   DO_EXIT, 
                   NO_WRITE, 
@@ -107,7 +131,7 @@ static int authenticator(struct thread_block *blk, const char name[], const char
 	if ( mysql_row == NULL ) {
 		mysql_free_result(mysql_res);
 		
-		log_errors( &(blk->tid),
+		log_errors( blk->tid,
                   MYSQL_ERRORS, 
                   DONT_EXIT, 
                   NO_WRITE, 
@@ -145,7 +169,8 @@ static int authenticator(struct thread_block *blk, const char name[], const char
 }
 
 
-static void authenticate_user(struct thread_block *blk, struct packet *pk) {
+static void authenticate_user(struct thread_block *blk, struct packet *pk) 
+{
 	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_PACKET_SIZE];
 	char *saveptr, *pword = NULL, *nword = NULL;
 	
@@ -184,7 +209,8 @@ static void authenticate_user(struct thread_block *blk, struct packet *pk) {
 
 
 
-static void register_new_user(struct thread_block *blk, struct packet *pk) {
+static void register_new_user(struct thread_block *blk, struct packet *pk) 
+{
 	char passwd[PASSWD_BUF_SIZE], name[NAME_BUF_SIZE], str[MAX_PACKET_SIZE];
 	char *saveptr, *pword = NULL, *nword = NULL;
 	
@@ -220,7 +246,8 @@ static void register_new_user(struct thread_block *blk, struct packet *pk) {
 	}
 }
 
-static void NOT_YET_AUTHENTICATED_EXIT(struct thread_block *block, struct packet *pk) {
+static void NOT_YET_AUTHENTICATED_EXIT(struct thread_block *block, struct packet *pk) 
+{
 	if ( block->user_auth == USER_NOT_AUTH ) {
 		//destroy_thread_node(block); 
 		destroy_packet(pk); 
@@ -228,7 +255,8 @@ static void NOT_YET_AUTHENTICATED_EXIT(struct thread_block *block, struct packet
 	} 
 }
 
-static void interpret_packets(struct thread_block *blk, struct packet *pk) {
+static void interpret_packets(struct thread_block *blk, struct packet *pk) 
+{
 	char db_query[MYSQL_QUERY_BUFF+1], str[MAX_PACKET_SIZE+1];
 	char *saveptr, *latti_word=NULL, *longi_word=NULL;  //tmp storage for strtok_r calls
 	char *mem=NULL; //This is used when dynamic memory is required and it must be freed in the scope used
@@ -259,7 +287,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 						my_info.database_name, blk->userid );
 			
 			if ( mysql_query(blk->con, db_query) !=0 ) {
-           log_errors( &(blk->tid),
+           log_errors(  blk->tid,
                         MYSQL_ERRORS, 
                         DONT_EXIT, 
                         NO_WRITE, 
@@ -273,7 +301,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 			if (mysql_res == NULL) {
 				mysql_free_result(mysql_res);
 		
-				log_errors( &(blk->tid),
+				log_errors( blk->tid,
                         MYSQL_ERRORS, 
                         DONT_EXIT, 
                         NO_WRITE, 
@@ -339,7 +367,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 							);
 				
 					if ( mysql_query(blk->con, db_query) !=0 ) {
-						log_errors( &(blk->tid),
+						log_errors( blk->tid,
 		                       MYSQL_ERRORS, 
 		                       DONT_EXIT, 
 		                       NO_WRITE, 
@@ -363,28 +391,28 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 							my_info.database_name, blk->userid );
 							
 				if ( mysql_query(blk->con, db_query) != 0 ) {
-						log_errors( &(blk->tid),
-		                       MYSQL_ERRORS, 
-		                       DONT_EXIT, 
-		                       NO_WRITE, 
-		                       LOGS_FATAL_ERRORS, 
-		                       MYSQL_QUERY_FAILED, 
-		                       NULL, 
-		                       error_ignore );
+						log_errors( blk->tid,
+		                            MYSQL_ERRORS, 
+		                            DONT_EXIT, 
+		                            NO_WRITE, 
+		                            LOGS_FATAL_ERRORS, 
+		                            MYSQL_QUERY_FAILED, 
+		                            NULL, 
+		                            error_ignore );
 				}
 				
 				mysql_res = mysql_store_result(blk->con);
 				if (mysql_res == NULL) {
 					mysql_free_result(mysql_res);
 		
-					log_errors( &(blk->tid),
-                        MYSQL_ERRORS, 
-                        DONT_EXIT, 
-                        NO_WRITE, 
-                        LOGS_FATAL_ERRORS, 
-                        MYSQL_RESULT_CANT_READ, 
-                        NULL, 
-                        error_ignore );	
+					log_errors( blk->tid,
+                                MYSQL_ERRORS, 
+                                DONT_EXIT, 
+                                NO_WRITE, 
+                                LOGS_FATAL_ERRORS, 
+                                MYSQL_RESULT_CANT_READ, 
+                                NULL, 
+                                error_ignore );	
 				}
 				
 				while ( (mysql_row = mysql_fetch_row(mysql_res)) ) {
@@ -406,14 +434,14 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 							my_info.database_name, blk->curr_time() , blk->userid);
 							
 				if ( mysql_query(blk->con, db_query) != 0 ) {
-						log_errors( &(blk->tid),
-		                       MYSQL_ERRORS, 
-		                       DONT_EXIT, 
-		                       NO_WRITE, 
-		                       LOGS_FATAL_ERRORS, 
-		                       MYSQL_QUERY_FAILED, 
-		                       NULL, 
-		                       error_ignore );
+						log_errors( blk->tid,
+		                            MYSQL_ERRORS, 
+		                            DONT_EXIT, 
+		                            NO_WRITE, 
+		                            LOGS_FATAL_ERRORS, 
+		                            MYSQL_QUERY_FAILED, 
+		                            NULL, 
+		                            error_ignore );
 				}
 				
 			}
@@ -468,15 +496,14 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 						sprintf(str, "This packet was dropped: %s", mem);
 						if (mem != NULL) free(mem);
 						
-						log_errors(&(blk->tid),
-										STD_ERRORS,
-										DONT_EXIT,
-										NO_WRITE,
-										LOGS_WARNING,
-										str,
-										NULL,
-										error_ignore
-									);
+						log_errors( blk->tid,
+								    STD_ERRORS,
+									DONT_EXIT,
+									NO_WRITE,
+									LOGS_WARNING,
+									str,
+									NULL,
+									error_ignore);
 					} 
 					
 				} else {
@@ -486,14 +513,14 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 					sprintf(str, "This packet was dropped: %s", mem);
 					if (mem != NULL) free(mem);
 						
-					log_errors(&(blk->tid),
-									STD_ERRORS,
-									DONT_EXIT,
-									NO_WRITE,
-									LOGS_WARNING,
-									str,
-									pk,
-									(void(*)(void*))destroy_packet );
+					log_errors( blk->tid,
+								STD_ERRORS,
+								DONT_EXIT,
+								NO_WRITE,
+								LOGS_WARNING,
+								str,
+								pk,
+								(void(*)(void*))destroy_packet );
 				}
 					
 			}
@@ -544,7 +571,8 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk) {
 }
 
 
-static void destroy_handlers_block(void *arg) {
+static void destroy_handlers_block(void *arg) 
+{
 	struct thread_block *node = (struct thread_block*)arg;
 	
 	if ( node != NULL ) {
@@ -558,7 +586,8 @@ static void destroy_handlers_block(void *arg) {
 }
 
 
-void *connection_handler(void *data) {
+void *connection_handler(void *data) 
+{
 	struct thread_block *thread_node = (struct thread_block*)data;
 	struct packet *pk = NULL;
 	ssize_t nread = 0;
@@ -575,6 +604,8 @@ void *connection_handler(void *data) {
 	
 	pthread_cleanup_push(destroy_handlers_block, thread_node);   //clean up function
 	
+	init_connection_handler(thread_node);
+
 	while (1) {
 		if ( thread_node->user_auth == USER_TO_EXIT ) break;
 		
@@ -587,14 +618,14 @@ void *connection_handler(void *data) {
 			if ( pk == NULL ) {   
 					strcat(buff, "::packet dropped.");
 					
-					log_errors( &(thread_node->tid),
-				            STD_ERRORS, 
-				            DONT_EXIT, 
-				            NO_WRITE, 
-				            LOGS_WARNING, 
-				            buff, 
-				            NULL,
-				            error_ignore );
+					log_errors( thread_node->tid,
+				                STD_ERRORS, 
+				                DONT_EXIT, 
+				                NO_WRITE, 
+				                LOGS_WARNING, 
+				                buff, 
+				                NULL,
+				                error_ignore );
 			}
 			
 			interpret_packets(thread_node, pk);

@@ -26,6 +26,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
@@ -38,6 +39,8 @@
 #include <fcntl.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "../libs/generic_linked_list.h"
 
 
 #define TIME_BUZ 40
@@ -52,7 +55,10 @@
 #define server_debug (void)0
 #endif
 
-#define SERVER_MSG(format, msg...) ({  fprintf(stderr, "(msg) [%s %s] " format "\n", __DATE__, __TIME__, ##msg); })
+#if 0
+#define SERVER_MSG(format, msg...) \
+        ({ fprintf(stderr, "(msg) [%s %s] " format "\n", __DATE__, __TIME__, ##msg); })
+#endif //not used function used
 
 #define GET_LOG_FILENAME(file) ({\
                                char *env_=getenv("HOME"); \
@@ -91,10 +97,10 @@ typedef enum {
 } logs_level;
 
 typedef enum {
-	WRITE_STDDER,
-	WRITE_STDOUT,
-	WRITE_BOTH_STDOUT_STDERR,
-	NO_WRITE
+	WRITE_STDDER,              /*write msg to stderr and log file*/
+	WRITE_STDOUT,              /*write msg to stdout and log file*/
+	WRITE_BOTH_STDOUT_STDERR,  /*write msg to both stderr and stdout, log file*/
+	NO_WRITE                   /*do not write msg to either stderr or stdout but write to log file*/
 } write_ops;
 
 struct logs_struct {
@@ -107,7 +113,7 @@ struct logs_struct {
 void init_logs_object();
 
 void log_errors(
-                pthread_t *thread_id,        /*The Thread id [if not thread then assign -1]*/
+                struct list_node *thread_id,        /*The Thread id [if not thread then assign -1]*/
                 error_type errtype,         /*Error type whether [MYSQL_ERRORS/STD_ERRORS]*/
                 do_exit ex,                 /*Determine whether to exit the program [DO_EXIT/DONT_EXIT]*/
                 write_ops op,               /*The stream struct to write to [WRITE_STDOUT/WRITE_STDDER/WRITE_BOTH_STDOUT_STDERR]*/
@@ -123,5 +129,8 @@ void destroy_logs_object() NORETURN;
 void error_ignore(void *);       /*Ignore destructor if Object parameter is not user(set to NULL)*/
 void error_close_fd(void *fd);  /*Function pointer to close sockets and file descriptors*/
 
+void SERVER_MSG(const char *format, ...);
+
+void get_ascii_time(char time_buf[]);
 
 #endif
