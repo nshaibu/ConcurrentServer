@@ -42,7 +42,6 @@ except ImportError as err:
     print("Install package [pip install pymysql]")
     sys.exit(1)
 
-import subprocess as sp
 
 glade_file = "main_window.glade"
         
@@ -96,7 +95,6 @@ class spawn_async_process:
                 os.kill(self.pid, sig)
             except ProcessLookupError:
                 pass
-        
 
 
 class server_data():
