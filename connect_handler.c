@@ -566,6 +566,8 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 							
 				send_msg_dontwait(blk, str);
 		break;
+		default: 
+			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 		
 	}
 }
