@@ -50,7 +50,8 @@ struct thread_block *create_thread_node(struct list_node *tid, unsigned sockfd, 
 	node->userid = -1;
 	memset(node->username, '\0', sizeof(node->username));
 	node->user_auth = USER_NOT_AUTH;
-	
+	node->revision_number = 0;
+
 	node->con = mysql_init(NULL);
 	if ( node->con == NULL ) {
 		log_errors( NULL,
@@ -148,7 +149,7 @@ void set_thread_node_tid(struct thread_block *th, struct list_node *tid) {
 }
 
 
-void set_geolocation_info(struct thread_block *node, long _long, long _latti) {
+void set_geolocation_info(struct thread_block *node, float _long, float _latti) {
 	node->loc.longitude = ( _long < 0 )? -1 : _long;
 	node->loc.lattitude = (_long < 0 )? -1 : _latti;
 }
@@ -166,4 +167,29 @@ void set_inQueue(struct thread_block *blk, Generic_queue *Q) {
 
 Generic_queue *get_inQueue(struct thread_block *blk) { 
 	return blk->in_queue; 
+}
+
+void set_revision_num(struct thread_block *blk) {
+	char db_query[MYSQL_QUERY_BUFF];
+	MYSQL_RES *result;
+
+	snprintf( db_query, MYSQL_QUERY_BUFF,
+						"SELECT * FROM %s.users", 
+						my_info.database_name );
+
+	if ( mysql_query(blk->con, db_query) !=0 ) {
+    	       		log_errors(  blk->tid,
+        	                MYSQL_ERRORS, 
+            	            DONT_EXIT, 
+                	        NO_WRITE, 
+                    	    LOGS_FATAL_ERRORS, 
+                    	    MYSQL_QUERY_FAILED, 
+                        	NULL, 
+                        	error_ignore );
+	}
+
+	result = mysql_store_result(blk->con);
+	int test = mysql_num_rows(result);
+
+	blk->revision_number = test;
 }

@@ -45,8 +45,8 @@ typedef enum {
 
 //Geolocation struct
 struct geoloc {
-	long  longitude;
-	long  lattitude;
+	float longitude;
+	float lattitude;
 };
 
 
@@ -61,6 +61,12 @@ struct thread_block {
 	user_auth_level user_auth;     /*Determine whether the user has been authenticated or exit loop(listening polling)*/
 	
 	MYSQL *con;     /*mysql connection handler for the thread*/
+	
+	/*
+	This number is used to sync the number of users on 
+	both client and database
+	*/
+	int revision_number;
 	
 	time_t start_time;    /* The started time */
 	time_t (*curr_time)(void);    /* gets the current time*/
@@ -88,7 +94,7 @@ void set_thread_node_socket(struct thread_block *th, int sockfd);
 
 void set_thread_node_tid(struct thread_block *th, struct list_node *tid);
 
-void set_geolocation_info(struct thread_block *node, long _long, long _latti);
+void set_geolocation_info(struct thread_block *node, float _long, float _latti);
 
 const struct geoloc *get_geolocation(struct thread_block *node);
 
@@ -99,5 +105,8 @@ void set_inQueue(struct thread_block *, Generic_queue *);
 Generic_queue *get_outQueue(struct thread_block *);
 
 Generic_queue *get_inQueue(struct thread_block *);
+
+//callback functions
+void set_revision_num(struct thread_block *);
 
 #endif

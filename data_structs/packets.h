@@ -51,6 +51,7 @@ typedef enum {
 //Packet types 
 #define REG_PACKET 9      /*User registration packet*/
 #define AUTH_PACKET 10    /*authentication packet*/
+#define LOGOUT_PACKET 13  /*logout packet*/
 #define USERS_PACKET 11   /*users packet*/
 #define GET_ALL_USERS_PACKET 12   /*ask the server for all  the users on the system and the userid*/
 

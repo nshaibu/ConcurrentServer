@@ -187,7 +187,7 @@ static void authenticate_user(struct thread_block *blk, struct packet *pk)
 		int ret = authenticator(blk, name, passwd);
 		
 		if ( ret == 0 ) {
-			sprintf(str, "|%d|-1|-1|-1|ACK|", ACK_PACKET);
+			sprintf(str, "|%d|%d|-1|-1|ACK|", ACK_PACKET, blk->userid);
 			send_msg_dontwait(blk, str);
 		} else {    //authentication failed
 			sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);
@@ -269,6 +269,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 	switch(pk->ptype) {
 		case REG_PACKET: register_new_user(blk, pk); break;
 		case AUTH_PACKET: authenticate_user(blk, pk); break;
+		case LOGOUT_PACKET:
 		case CLOSE_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
@@ -282,37 +283,42 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 		case GET_ALL_USERS_PACKET:
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
 			
-			snprintf( db_query, MYSQL_QUERY_BUFF,
-						"SELECT userid, username FROM %s.users WHERE NOT userid = %d ORDER BY userid ", 
-						my_info.database_name, blk->userid );
+			set_revision_num(blk);
 			
-			if ( mysql_query(blk->con, db_query) !=0 ) {
-           log_errors(  blk->tid,
-                        MYSQL_ERRORS, 
-                        DONT_EXIT, 
-                        NO_WRITE, 
-                        LOGS_FATAL_ERRORS, 
-                        MYSQL_QUERY_FAILED, 
-                        NULL, 
-                        error_ignore );
-			}
+			int cli_revision_num = atoi((const char*)pk->msg);
 			
-			mysql_res = mysql_store_result(blk->con);
-			if (mysql_res == NULL) {
-				mysql_free_result(mysql_res);
+			if ( blk->revision_number > cli_revision_num) {
+				snprintf( db_query, MYSQL_QUERY_BUFF,
+							"SELECT userid, username FROM %s.users WHERE userid = %d ORDER BY userid ", 
+							my_info.database_name, cli_revision_num + 1 );
+			
+				if ( mysql_query(blk->con, db_query) !=0 ) {
+           			log_errors(  blk->tid,
+                	        MYSQL_ERRORS, 
+                    	    DONT_EXIT, 
+                    	    NO_WRITE, 
+            	            LOGS_FATAL_ERRORS, 
+                	        MYSQL_QUERY_FAILED, 
+                    	    NULL, 
+                        	error_ignore );
+				}
+			
+				mysql_res = mysql_store_result(blk->con);
+				if (mysql_res == NULL) {
+					mysql_free_result(mysql_res);
 		
-				log_errors( blk->tid,
-                        MYSQL_ERRORS, 
-                        DONT_EXIT, 
-                        NO_WRITE, 
-                        LOGS_FATAL_ERRORS, 
-                        MYSQL_RESULT_CANT_READ, 
-                        NULL, 
-                        error_ignore );	
-			}
+					log_errors( blk->tid,
+                    	    MYSQL_ERRORS, 
+                    	    DONT_EXIT, 
+                    	    NO_WRITE, 
+                        	LOGS_FATAL_ERRORS, 
+                        	MYSQL_RESULT_CANT_READ, 
+                        	NULL, 
+                        	error_ignore );	
+				}
 			
 			
-			while( (mysql_row = mysql_fetch_row(mysql_res)) ) {
+				mysql_row = mysql_fetch_row(mysql_res);
 				memset(str, '\0', MAX_PACKET_SIZE);
 				
 				snprintf(str, MAX_PACKET_SIZE,
@@ -323,8 +329,18 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 				
 				server_debug("Sending user: %s", str);
 				send_msg_dontwait(blk, str);
+			} else {
+				memset(str, '\0', MAX_PACKET_SIZE);
+				
+				snprintf(str, MAX_PACKET_SIZE,
+							"|%d|%d|%d|0|0|",
+							FIN_PACKET,
+							blk->userid, blk->userid
+						);
+				
+				server_debug("Sending user: %s", str);
+				send_msg_dontwait(blk, str);				
 			}
-			
 			
 		break;
 		case MSG_PACKET:
@@ -383,7 +399,7 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 		break;
 		case GET_MSG_PACKET: 
 			NOT_YET_AUTHENTICATED_EXIT(blk, pk);
-			
+
 			if ( blk->userid == pk->sender_id ) {
 				sprintf(db_query,
 							"SELECT sender_id, receiver_id, msg_type, message FROM %s.messages WHERE \
@@ -453,10 +469,10 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 			
 			if ( pk->receiver_id == pk->sender_id ) {    /*if I am both the sender and the receiver, then*/ 
 				snprintf( str, MAX_PACKET_SIZE,           /*I am asking for my location*/
-							"|%d|%d|%d|%d|%ld:%ld|",         /*format of /30/3/1/10/125541:624561/*/
+							"|%d|%d|%d|%d|%f:%f|",         /*format of /30/3/1/10/125541:624561/*/
 							GEO_PACKET, 
 							pk->sender_id, pk->receiver_id, 
-							COORD_DATA, blk->loc.longitude, blk->loc.lattitude);
+							COORD_DATA, blk->loc.lattitude, blk->loc.longitude);
 							
 				send_msg_dontwait(blk, str);
 			}
@@ -473,12 +489,12 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 					memset(str, '\0', MAX_PACKET_SIZE);
 					
 					snprintf( str, MAX_PACKET_SIZE,
-								"|%d|%d|%d|%d|%ld:%ld",
+								"|%d|%d|%d|%d|%f:%f|",
 								GEO_PACKET,
 								pk->receiver_id,
 								pk->sender_id,
 								COORD_DATA,
-								blk->loc.longitude, blk->loc.lattitude
+								blk->loc.lattitude, blk->loc.longitude 
 							 );
 					
 					struct packet *pckt = string_to_packet(str);  
@@ -521,6 +537,9 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 								str,
 								pk,
 								(void(*)(void*))destroy_packet );
+								
+					sprintf(str, "|%d|-1|-1|-1|ACK|", ACK_PACKET);
+					send_msg_dontwait(blk, str);
 				}
 					
 			}
@@ -538,8 +557,11 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 					pthread_mutex_unlock( &(node->in_queue->queue_lock) );  
 					
 					server_debug("Enqueue packet: |%d|%d|%d|%d|%s|", pk->ptype, pk->sender_id, pk->receiver_id, pk->tmsg, (char*)pk->msg);
-				} else 
+				} else {
 					destroy_packet(pk);
+					sprintf(str, "|%d|-1|-1|-1|ACK|", ACK_PACKET);
+					send_msg_dontwait(blk, str);
+				}
 			}
 			
 		break;
@@ -549,9 +571,11 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 			latti_word = strtok_r(pk->msg, ":", &saveptr);
 			longi_word = strtok_r(NULL, ":", &saveptr);
 			
-			if ( latti_word != NULL && longi_word != NULL ) {
-				set_geolocation_info(blk, atol((const char*)longi_word), atol((const char*)latti_word));
-			}
+			server_debug("Setting geolocation for user %d", blk->userid);
+			double lattitude = strtod((char*)latti_word, NULL);
+			double longitude = strtod((char*)longi_word, NULL);
+			
+			set_geolocation_info(blk, longitude, lattitude);
 			
 			destroy_packet(pk);
 		break;
