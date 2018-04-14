@@ -234,15 +234,15 @@ static void register_new_user(struct thread_block *blk, struct packet *pk)
 			sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);
 			send_msg_dontwait(blk, str);
 
-			destroy_thread_node(blk);
-			pthread_exit(NULL);
+			//destroy_thread_node(blk);
+			//pthread_exit(NULL);
 		}
 	} else {    //if any word is null exit
 		sprintf(str, "|%d|-1|-1|-1|FIN|", FIN_PACKET);  /*send fin packet and close*/
 
 		send_msg_dontwait(blk, str);											  /*connects*/
-		destroy_thread_node(blk);
-		pthread_exit(NULL);
+		//destroy_thread_node(blk);
+		//pthread_exit(NULL);
 	}
 }
 
