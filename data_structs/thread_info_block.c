@@ -150,8 +150,8 @@ void set_thread_node_tid(struct thread_block *th, struct list_node *tid) {
 
 
 void set_geolocation_info(struct thread_block *node, float _long, float _latti) {
-	node->loc.longitude = ( _long < 0 )? -1 : _long;
-	node->loc.lattitude = (_long < 0 )? -1 : _latti;
+	node->loc.longitude = _long;
+	node->loc.lattitude = _latti;
 }
 
 const struct geoloc *get_geolocation(struct thread_block *node) { 

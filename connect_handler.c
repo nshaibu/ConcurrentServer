@@ -572,8 +572,8 @@ static void interpret_packets(struct thread_block *blk, struct packet *pk)
 			longi_word = strtok_r(NULL, ":", &saveptr);
 			
 			server_debug("Setting geolocation for user %d", blk->userid);
-			double lattitude = strtod((char*)latti_word, NULL);
-			double longitude = strtod((char*)longi_word, NULL);
+			double lattitude = strtof((const char*)latti_word, NULL);
+			double longitude = strtof((const char*)longi_word, NULL);
 			
 			set_geolocation_info(blk, longitude, lattitude);
 			

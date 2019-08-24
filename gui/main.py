@@ -244,6 +244,10 @@ class StartToolButton:
         #textview widgets configuration
         self.textview = self.builder.get_object("main_window_textview")
         self.textview_buffer = self.textview.get_buffer()
+
+        self.message_scroll = self.builder.get_object("messages_scrollwindow")
+        
+        self.message_scroll.connect("size-allocate", self.auto_scroll_textview)
         
         self.textview_tag = self.textview_buffer.create_tag("textview_format",  foreground="blue", background="red")
 
@@ -257,6 +261,10 @@ class StartToolButton:
         self.CMD = list()   ##background command list
 
         self.error_dialog = self.builder.get_object("ip_addrwrong_dialog")
+
+    def auto_scroll_textview(self, widget, event, data=None):
+        adj = self.message_scroll.get_vadjustment()
+        adj.set_value( adj.get_upper() - adj.get_page_size() )
 
     def write_stdout_textview(self, fd, condition, user_data):             ##callback to write to textview
         
