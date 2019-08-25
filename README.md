@@ -1,2 +1,2 @@
 # Concurrent-Server
-![view](img/intial.png)
+![Initial Server View](img/intial.png)
