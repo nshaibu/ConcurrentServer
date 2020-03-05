@@ -9,10 +9,13 @@ other operating system used by the organization.
 #### Prerequisites
 * Python 3+
 * pymysql
-* GTK+3
+* GTK+3 python wrapper
 ```
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
 ```
+* Pthread
+* MySQL-Lib
+
 
 ## Starting Server
 The server requires to connect to MySQL database server before it can start. Hence, to configure the connection to the database server. The user has to click on the database tool button of the server. This displays a popover menu requesting the user to enter the hostname, user password, and the username as shown in Figure below.
