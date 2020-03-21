@@ -6,7 +6,7 @@ other operating system used by the organization.
 ![Conceptual design](img/Diagram1.png)
 
 ## Setup
-#### Prerequisites
+#### Prerequisites Python
 * Python 3+
 * pymysql
 * GTK+3 python wrapper
