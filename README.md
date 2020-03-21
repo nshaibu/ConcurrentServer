@@ -6,13 +6,14 @@ other operating system used by the organization.
 ![Conceptual design](img/Diagram1.png)
 
 ## Setup
-#### Prerequisites Python
+#### Python Prerequisites
 * Python 3+
 * pymysql
 * GTK+3 python wrapper
 ```
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
 ```
+#### C Prerequisites
 * Pthread
 * MySQL-Lib
 
