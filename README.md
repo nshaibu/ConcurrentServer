@@ -35,5 +35,5 @@ The server is given an IP address and port number to listen on by clicking on th
 After configuring the database and giving the server an IP address and port number. The server can now be started by clicking the start tool button. This is shown in Figure below.
 ![Started Server](img/serverstart.png)
 
-## Action
+## In Action
 ![two users on the system](img/FINAL_VIEW.png)
