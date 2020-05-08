@@ -17,7 +17,7 @@ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
 * Pthread
 * MySQL-Lib
 
-I have not added python setup yet. So to buid and run the application:
+I have not added python setup yet. So to build and run the application:
 ```
 $ cd Concurrent-Server
 $ make
