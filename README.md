@@ -7,7 +7,7 @@ other operating system used by the organization.
 
 ## Setup
 #### Python Prerequisites
-* Python 3+
+* Python3+
 * pymysql
 * GTK+3 python wrapper
 ```
