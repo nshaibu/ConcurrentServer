@@ -346,7 +346,7 @@ void make_server()
 	int main(int argc, char **argv) {
 	
 		set_net_data(4040, "127.0.0.1");
-		set_mysql_data("localhost", "root", "1993naf", "concurrent_chat");
+		set_mysql_data("localhost", "root", "database_password", "concurrent_chat");
 		make_server();
 		
 		return 0;
