@@ -17,7 +17,10 @@ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
 * Pthread
 * MySQL-Lib
 
+* [Follow the guide here](https://pygobject.readthedocs.io/en/latest/getting_started.html) on how to install pygobject on your platform.
+
 I have not added python setup yet. So to build and run the application:
+
 ```
 $ cd Concurrent-Server
 $ make
