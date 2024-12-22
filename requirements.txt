@@ -6,4 +6,4 @@ pycups==1.9.73
 Pygments==2.7.4
 pygobject==3.26.1
 PyMySQL==0.8.0
-requests==2.20.0
+requests==2.32.2
